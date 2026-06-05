@@ -1,0 +1,2989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invincible — Can you go unbeaten?</title>
+<script>
+// ============================================================
+// INVINCIBLE — player database
+// Positions are stint-specific: the position the player actually
+// played at THAT club in THAT era (e.g. C.Ronaldo: RW at Man Utd,
+// LW at Real Madrid, ST at Juventus).
+// Vocabulary: GK | RB CB LB | CDM CM CAM | RM LM RW LW ST (multi-position allowed, e.g. "LW/ST")
+// Hidden engine stats: outfield [ATT, CRE, DEF, PHY, BIG] (0-99)
+// Goalkeepers use GK-specific stats: [STO shot-stopping, HAN handling, KIC kicking, CMD command, BIG big-game]
+// ============================================================
+function P(n, pos, a, c, d, ph, b) { return { n: n, pos: pos, s: [a, c, d, ph, b] }; }
+
+const DATA = {
+  pl: {
+    label: "Premier League",
+    target: 38,
+    targetLabel: "38-0",
+    eras: ["90s", "00s", "10s", "20s"],
+    clubs: {
+      "Manchester United": { abbr: "MUN", c1: "#DA291C", c2: "#FBE122", eras: {
+        "90s": [
+          P("Peter Schmeichel", "GK", 95, 92, 68, 96, 95),
+          P("Jaap Stam", "CB", 25, 60, 96, 95, 90),
+          P("Denis Irwin", "LB", 45, 72, 88, 80, 88),
+          P("Roy Keane", "CM", 70, 82, 92, 93, 97),
+          P("David Beckham", "RM", 80, 96, 55, 78, 92),
+          P("Ryan Giggs", "LM", 84, 90, 50, 86, 92),
+          P("Eric Cantona", "ST", 93, 92, 40, 84, 97),
+          P("Andy Cole", "ST", 90, 70, 30, 80, 84),
+                  P("Gary Pallister", "CB", 30, 57, 93, 91, 87),
+                  P("Paul Ince", "CM", 64, 84, 74, 87, 87),
+                  P("Andrei Kanchelskis", "RW", 82, 79, 43, 87, 84),
+                  P("Ole Gunnar Solskjaer", "ST", 89, 66, 30, 86, 84),
+        ],
+        "00s": [
+          P("Edwin van der Sar", "GK", 88, 92, 85, 88, 91),
+          P("Rio Ferdinand", "CB", 35, 75, 96, 90, 92),
+          P("Nemanja Vidic", "CB", 32, 55, 95, 96, 93),
+          P("Gary Neville", "RB", 30, 70, 88, 80, 89),
+          P("Paul Scholes", "CM", 82, 95, 60, 70, 93),
+          P("Michael Carrick", "CDM", 55, 88, 75, 72, 84),
+          P("Cristiano Ronaldo", "RW", 97, 88, 35, 93, 96),
+          P("Wayne Rooney", "ST", 92, 88, 45, 90, 93),
+          P("Ruud van Nistelrooy", "ST", 95, 65, 25, 82, 92),
+                  P("Mikael Silvestre", "LB", 34, 65, 83, 83, 78),
+                  P("Ryan Giggs", "LM", 76, 82, 52, 86, 83),
+                  P("Carlos Tevez", "ST", 89, 68, 34, 86, 86),
+        ],
+        "10s": [
+          P("David de Gea", "GK", 95, 85, 68, 70, 88),
+          P("Patrice Evra", "LB", 40, 72, 88, 86, 89),
+          P("Chris Smalling", "CB", 25, 55, 85, 88, 80),
+          P("Antonio Valencia", "RB", 45, 68, 84, 90, 82),
+          P("Paul Pogba", "CM", 75, 88, 65, 90, 84),
+          P("Juan Mata", "RW", 72, 88, 40, 60, 82),
+          P("Robin van Persie", "ST", 94, 82, 30, 78, 90),
+          P("Zlatan Ibrahimovic", "ST", 93, 85, 35, 92, 93),
+          P("Wayne Rooney", "CAM", 86, 85, 45, 86, 89),
+                  P("Rafael da Silva", "RB", 32, 62, 81, 82, 80),
+                  P("Ander Herrera", "CM", 59, 78, 68, 81, 81),
+                  P("Anthony Martial", "LW", 76, 73, 41, 84, 78),
+        ],
+        "20s": [
+          P("Andre Onana", "GK", 78, 65, 86, 72, 66),
+          P("Lisandro Martinez", "CB", 28, 72, 90, 85, 87),
+          P("Luke Shaw", "LB", 42, 75, 85, 84, 82),
+          P("Raphael Varane", "CB", 25, 60, 89, 86, 88),
+          P("Bruno Fernandes", "CAM", 86, 93, 50, 80, 88),
+          P("Casemiro", "CDM", 50, 75, 88, 86, 87),
+          P("Cristiano Ronaldo", "ST", 91, 78, 28, 84, 93),
+          P("Marcus Rashford", "LW", 87, 72, 35, 88, 82),
+          P("Alejandro Garnacho", "RW", 78, 65, 30, 80, 75),
+                  P("Harry Maguire", "CB", 31, 59, 91, 93, 87),
+                  P("Aaron Wan-Bissaka", "RB", 34, 62, 83, 83, 78),
+                  P("Scott McTominay", "CM", 59, 77, 72, 82, 79),
+        ],
+      }},
+      "Arsenal": { abbr: "ARS", c1: "#EF0107", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("David Seaman", "GK", 91, 93, 62, 88, 92),
+          P("Tony Adams", "CB", 35, 55, 96, 90, 96),
+          P("Lee Dixon", "RB", 35, 65, 88, 82, 86),
+          P("Nigel Winterburn", "LB", 32, 62, 87, 82, 85),
+          P("Patrick Vieira", "CM", 65, 84, 93, 95, 94),
+          P("Marc Overmars", "LW", 84, 80, 40, 88, 86),
+          P("Emmanuel Petit", "CDM", 55, 84, 88, 88, 88),
+          P("Dennis Bergkamp", "ST", 92, 97, 40, 78, 94),
+          P("Ian Wright", "ST", 94, 68, 28, 84, 90),
+                  P("Martin Keown", "CB", 32, 59, 91, 92, 89),
+                  P("Ray Parlour", "RM", 74, 78, 43, 83, 77),
+                  P("Nicolas Anelka", "ST", 88, 65, 31, 86, 87),
+        ],
+        "00s": [
+          P("Jens Lehmann", "GK", 87, 82, 74, 84, 85),
+          P("Sol Campbell", "CB", 35, 55, 95, 95, 92),
+          P("Ashley Cole", "LB", 42, 75, 93, 90, 90),
+          P("Lauren", "RB", 30, 62, 87, 86, 84),
+          P("Patrick Vieira", "CM", 65, 84, 93, 95, 95),
+          P("Robert Pires", "LW", 86, 90, 40, 76, 90),
+          P("Freddie Ljungberg", "RM", 80, 78, 50, 84, 88),
+          P("Cesc Fabregas", "CM", 70, 94, 55, 70, 87),
+          P("Thierry Henry", "ST/LW", 99, 92, 35, 93, 95),
+                  P("Kolo Toure", "CB", 31, 58, 93, 93, 89),
+                  P("Gilberto Silva", "CDM", 46, 77, 87, 90, 85),
+                  P("Gael Clichy", "LB", 33, 65, 82, 81, 78),
+        ],
+        "10s": [
+          P("Petr Cech", "GK", 82, 84, 70, 82, 78),
+          P("Laurent Koscielny", "CB", 28, 60, 89, 87, 84),
+          P("Nacho Monreal", "LB", 35, 68, 85, 80, 80),
+          P("Hector Bellerin", "RB", 38, 66, 81, 92, 78),
+          P("Mesut Ozil", "CAM", 70, 96, 35, 65, 82),
+          P("Santi Cazorla", "CM", 74, 92, 50, 65, 86),
+          P("Aaron Ramsey", "CM", 72, 82, 65, 80, 85),
+          P("Alexis Sanchez", "LW", 90, 84, 45, 88, 88),
+          P("Olivier Giroud", "ST", 84, 74, 30, 86, 86),
+                  P("Bacary Sagna", "RB", 31, 60, 84, 86, 81),
+                  P("Theo Walcott", "RW", 82, 79, 46, 89, 81),
+                  P("Jack Wilshere", "CM", 61, 79, 72, 79, 80),
+        ],
+        "20s": [
+          P("David Raya", "GK", 85, 84, 89, 82, 82),
+          P("William Saliba", "CB", 28, 68, 93, 92, 87),
+          P("Gabriel Magalhaes", "CB", 38, 58, 91, 92, 86),
+          P("Ben White", "RB", 30, 70, 86, 82, 81),
+          P("Martin Odegaard", "CAM", 78, 94, 50, 70, 87),
+          P("Declan Rice", "CDM", 60, 80, 92, 91, 89),
+          P("Bukayo Saka", "RW", 88, 86, 45, 84, 88),
+          P("Gabriel Martinelli", "LW", 82, 72, 38, 86, 80),
+                  P("Oleksandr Zinchenko", "LB", 35, 64, 84, 81, 80),
+                  P("Thomas Partey", "CDM", 44, 70, 83, 86, 80),
+                  P("Kai Havertz", "ST", 84, 61, 26, 84, 78),
+                  P("Leandro Trossard", "LW", 78, 74, 42, 82, 78),
+        ],
+      }},
+      "Liverpool": { abbr: "LIV", c1: "#C8102E", c2: "#F6EB61", eras: {
+        "90s": [
+          P("David James", "GK", 84, 66, 68, 78, 65),
+          P("Rob Jones", "RB", 25, 62, 85, 82, 80),
+          P("Jamie Carragher", "RB/CB", 22, 55, 87, 84, 86),
+          P("Steve McManaman", "RM", 80, 88, 40, 80, 85),
+          P("Jamie Redknapp", "CM", 65, 86, 60, 72, 81),
+          P("Patrik Berger", "LM", 75, 80, 45, 78, 79),
+          P("Robbie Fowler", "ST", 95, 74, 25, 78, 89),
+          P("Michael Owen", "ST", 93, 68, 22, 90, 90),
+                  P("Jason McAteer", "RB", 34, 63, 84, 84, 79),
+                  P("Mark Wright", "CB", 26, 53, 85, 88, 80),
+                  P("John Barnes", "LM", 71, 77, 47, 80, 77),
+                  P("Stan Collymore", "ST", 86, 64, 27, 85, 82),
+        ],
+        "00s": [
+          P("Pepe Reina", "GK", 85, 86, 85, 84, 82),
+          P("Jamie Carragher", "CB", 22, 58, 94, 86, 94),
+          P("Sami Hyypia", "CB", 35, 58, 93, 90, 90),
+          P("Steve Finnan", "RB", 30, 66, 86, 80, 83),
+          P("Steven Gerrard", "CM", 88, 93, 78, 92, 99),
+          P("Xabi Alonso", "CDM", 62, 95, 75, 76, 90),
+          P("Fernando Torres", "ST", 95, 75, 25, 88, 90),
+          P("Dirk Kuyt", "RW", 78, 70, 60, 88, 86),
+                  P("John Arne Riise", "LB", 34, 64, 82, 85, 79),
+                  P("Daniel Agger", "CB", 29, 54, 85, 85, 83),
+                  P("Javier Mascherano", "CDM", 41, 68, 82, 85, 80),
+                  P("Luis Garcia", "RW", 78, 76, 40, 83, 76),
+        ],
+        "10s": [
+          P("Alisson Becker", "GK", 93, 92, 90, 88, 92),
+          P("Virgil van Dijk", "CB", 40, 78, 99, 95, 95),
+          P("Andrew Robertson", "LB", 42, 84, 88, 90, 88),
+          P("Trent Alexander-Arnold", "RB", 55, 95, 78, 80, 88),
+          P("Philippe Coutinho", "CAM", 84, 90, 40, 70, 84),
+          P("Georginio Wijnaldum", "CM", 62, 78, 78, 84, 86),
+          P("Luis Suarez", "ST", 97, 88, 40, 88, 92),
+          P("Mohamed Salah", "RW", 96, 84, 38, 90, 93),
+          P("Sadio Mane", "LW", 92, 78, 40, 92, 91),
+                  P("Glen Johnson", "RB", 31, 62, 82, 84, 79),
+                  P("Jordan Henderson", "CM", 59, 76, 69, 81, 79),
+                  P("Roberto Firmino", "ST", 85, 64, 27, 81, 81),
+        ],
+        "20s": [
+          P("Alisson Becker", "GK", 94, 91, 90, 87, 93),
+          P("Virgil van Dijk", "CB", 40, 78, 96, 93, 94),
+          P("Ibrahima Konate", "CB", 25, 60, 89, 92, 84),
+          P("Fabinho", "CDM", 45, 74, 88, 86, 85),
+          P("Thiago Alcantara", "CM", 60, 95, 65, 70, 84),
+          P("Alexis Mac Allister", "CM", 68, 88, 72, 78, 87),
+          P("Mohamed Salah", "RW", 95, 86, 38, 88, 93),
+          P("Luis Diaz", "LW", 84, 75, 38, 87, 82),
+                  P("Trent Alexander-Arnold", "RB", 32, 88, 85, 84, 81),
+                  P("Andrew Robertson", "LB", 32, 78, 81, 85, 78),
+                  P("Darwin Nunez", "ST", 85, 61, 29, 83, 78),
+                  P("Dominik Szoboszlai", "CM", 68, 80, 62, 84, 79),
+        ],
+      }},
+      "Chelsea": { abbr: "CHE", c1: "#034694", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Ed de Goey", "GK", 80, 78, 62, 80, 72),
+          P("Marcel Desailly", "CB", 30, 65, 95, 94, 92),
+          P("Frank Leboeuf", "CB", 35, 72, 87, 78, 84),
+          P("Graeme Le Saux", "LB", 40, 74, 84, 82, 80),
+          P("Dennis Wise", "CM", 55, 76, 78, 78, 86),
+          P("Gus Poyet", "CAM", 72, 78, 60, 80, 83),
+          P("Roberto Di Matteo", "CM", 65, 80, 68, 76, 85),
+          P("Gianfranco Zola", "ST", 90, 94, 35, 70, 93),
+          P("Mark Hughes", "ST", 82, 72, 40, 88, 86),
+                  P("Dan Petrescu", "RB", 30, 60, 84, 84, 79),
+                  P("Gianluca Vialli", "ST", 84, 62, 27, 85, 81),
+                  P("Celestine Babayaro", "LB", 34, 62, 82, 82, 80),
+        ],
+        "00s": [
+          P("Petr Cech", "GK", 93, 94, 74, 91, 92),
+          P("John Terry", "CB", 42, 60, 97, 92, 95),
+          P("Ricardo Carvalho", "CB", 25, 68, 94, 84, 89),
+          P("Ashley Cole", "LB", 40, 74, 93, 90, 91),
+          P("Frank Lampard", "CM", 90, 92, 65, 84, 95),
+          P("Claude Makelele", "CDM", 30, 75, 96, 84, 91),
+          P("Michael Essien", "CM", 65, 78, 90, 95, 88),
+          P("Didier Drogba", "ST", 94, 78, 35, 96, 98),
+          P("Joe Cole", "LW/RW", 76, 86, 40, 74, 82),
+                  P("William Gallas", "CB", 25, 54, 85, 85, 82),
+                  P("Paulo Ferreira", "RB", 32, 64, 83, 85, 78),
+                  P("Arjen Robben", "LW", 75, 74, 41, 86, 76),
+        ],
+        "10s": [
+          P("Thibaut Courtois", "GK", 91, 87, 76, 86, 85),
+          P("Cesar Azpilicueta", "RB", 30, 72, 91, 84, 89),
+          P("Gary Cahill", "CB", 35, 55, 88, 87, 85),
+          P("Branislav Ivanovic", "CB", 42, 56, 88, 92, 87),
+          P("N'Golo Kante", "CDM", 45, 76, 97, 92, 93),
+          P("Cesc Fabregas", "CM", 65, 94, 50, 68, 86),
+          P("Willian", "RW", 76, 82, 50, 80, 82),
+          P("Eden Hazard", "LW", 92, 92, 35, 88, 92),
+          P("Diego Costa", "ST", 91, 70, 35, 92, 89),
+                  P("Ashley Cole", "LB", 34, 63, 84, 85, 79),
+                  P("Ramires", "CM", 61, 79, 72, 80, 80),
+                  P("Juan Mata", "CAM", 75, 87, 44, 74, 80),
+        ],
+        "20s": [
+          P("Edouard Mendy", "GK", 86, 82, 72, 84, 88),
+          P("Thiago Silva", "CB", 30, 75, 93, 80, 92),
+          P("Reece James", "RB", 48, 84, 87, 88, 84),
+          P("Ben Chilwell", "LB", 45, 75, 83, 84, 80),
+          P("N'Golo Kante", "CM", 42, 74, 93, 88, 92),
+          P("Enzo Fernandez", "CM", 58, 86, 74, 80, 82),
+          P("Mason Mount", "CAM", 70, 82, 55, 78, 81),
+          P("Cole Palmer", "RW/CAM", 89, 90, 35, 76, 90),
+          P("Raheem Sterling", "LW", 82, 74, 35, 86, 78),
+                  P("Moises Caicedo", "CDM", 43, 71, 83, 85, 82),
+                  P("Nicolas Jackson", "ST", 86, 62, 26, 81, 78),
+                  P("Malo Gusto", "RB", 33, 61, 81, 84, 78),
+        ],
+      }},
+      "Manchester City": { abbr: "MCI", c1: "#6CABDD", c2: "#FFFFFF", eras: {
+        "00s": [
+          P("Shay Given", "GK", 89, 85, 70, 74, 80),
+          P("Richard Dunne", "CB", 28, 48, 86, 88, 82),
+          P("Micah Richards", "RB", 35, 60, 84, 92, 80),
+          P("Shaun Wright-Phillips", "RW", 74, 74, 42, 86, 78),
+          P("Elano", "CAM", 76, 86, 38, 70, 79),
+          P("Stephen Ireland", "CM", 70, 80, 45, 74, 75),
+          P("Carlos Tevez", "ST", 91, 80, 45, 90, 90),
+          P("Robinho", "LW", 84, 84, 28, 80, 76),
+                  P("Sylvain Distin", "CB", 29, 50, 87, 86, 84),
+                  P("Joey Barton", "CM", 58, 74, 64, 78, 72),
+                  P("Nicolas Anelka", "ST", 88, 65, 31, 86, 87),
+                  P("Vedran Corluka", "RB", 30, 63, 83, 82, 78),
+        ],
+        "10s": [
+          P("Joe Hart", "GK", 86, 82, 72, 82, 80),
+          P("Vincent Kompany", "CB", 40, 65, 95, 92, 97),
+          P("Pablo Zabaleta", "RB", 35, 68, 88, 88, 89),
+          P("Aymeric Laporte", "CB", 28, 72, 90, 86, 83),
+          P("Yaya Toure", "CM", 84, 86, 80, 96, 95),
+          P("David Silva", "CAM", 78, 97, 42, 68, 92),
+          P("Kevin De Bruyne", "CM", 86, 98, 55, 84, 93),
+          P("Fernandinho", "CDM", 48, 76, 91, 86, 88),
+          P("Sergio Aguero", "ST", 97, 78, 28, 86, 96),
+          P("Raheem Sterling", "LW", 88, 78, 35, 88, 84),
+                  P("Leroy Sane", "LW", 84, 72, 39, 85, 79),
+                  P("Gael Clichy", "LB", 33, 65, 82, 81, 78),
+        ],
+        "20s": [
+          P("Ederson", "GK", 84, 85, 97, 82, 86),
+          P("Ruben Dias", "CB", 30, 65, 95, 92, 92),
+          P("Kyle Walker", "RB", 35, 68, 89, 96, 88),
+          P("John Stones", "CB", 38, 80, 90, 84, 88),
+          P("Kevin De Bruyne", "CM", 85, 97, 52, 82, 93),
+          P("Rodri", "CDM", 60, 90, 94, 90, 97),
+          P("Bernardo Silva", "CM", 74, 92, 65, 78, 90),
+          P("Erling Haaland", "ST", 99, 65, 25, 97, 94),
+          P("Phil Foden", "RW/CAM", 88, 88, 40, 80, 87),
+                  P("Ilkay Gundogan", "CM", 62, 76, 72, 80, 80),
+                  P("Riyad Mahrez", "RW", 76, 73, 40, 86, 78),
+                  P("Joao Cancelo", "LB", 45, 82, 81, 82, 78),
+        ],
+      }},
+      "Tottenham Hotspur": { abbr: "TOT", c1: "#132257", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Ian Walker", "GK", 80, 74, 66, 72, 68),
+          P("Sol Campbell", "CB", 32, 52, 93, 94, 88),
+          P("Gary Mabbutt", "CB", 30, 55, 87, 82, 88),
+          P("Stephen Carr", "RB", 32, 60, 84, 86, 79),
+          P("David Ginola", "LW", 84, 90, 30, 80, 85),
+          P("Darren Anderton", "RM", 70, 84, 50, 74, 80),
+          P("Teddy Sheringham", "ST", 88, 88, 35, 72, 90),
+          P("Jurgen Klinsmann", "ST", 93, 76, 30, 86, 92),
+          P("Les Ferdinand", "ST", 88, 62, 30, 92, 84),
+                  P("Justin Edinburgh", "LB", 32, 64, 85, 84, 79),
+                  P("Ruel Fox", "RW", 74, 76, 42, 84, 78),
+                  P("Steffen Iversen", "ST", 83, 63, 25, 84, 78),
+        ],
+        "00s": [
+          P("Paul Robinson", "GK", 82, 76, 78, 76, 72),
+          P("Ledley King", "CB", 30, 62, 94, 88, 88),
+          P("Michael Dawson", "CB", 28, 52, 85, 84, 83),
+          P("Luka Modric", "CM", 66, 93, 55, 70, 86),
+          P("Aaron Lennon", "RW", 70, 72, 40, 90, 75),
+          P("Michael Carrick", "CDM", 52, 86, 72, 72, 80),
+          P("Dimitar Berbatov", "ST", 90, 90, 25, 74, 86),
+          P("Robbie Keane", "ST", 88, 78, 30, 80, 86),
+                  P("Jermain Defoe", "ST", 86, 62, 28, 81, 81),
+                  P("Benoit Assou-Ekotto", "LB", 33, 66, 82, 83, 79),
+                  P("Jermaine Jenas", "CM", 61, 79, 69, 78, 80),
+                  P("Younes Kaboul", "CB", 27, 53, 87, 87, 80),
+        ],
+        "10s": [
+          P("Hugo Lloris", "GK", 89, 82, 74, 76, 82),
+          P("Jan Vertonghen", "CB", 32, 70, 91, 85, 86),
+          P("Toby Alderweireld", "CB", 30, 75, 91, 84, 85),
+          P("Kyle Walker", "RB", 35, 65, 86, 95, 83),
+          P("Danny Rose", "LB", 36, 64, 83, 88, 79),
+          P("Christian Eriksen", "CAM", 76, 94, 45, 70, 86),
+          P("Mousa Dembele", "CM", 55, 82, 82, 92, 84),
+          P("Harry Kane", "ST", 97, 84, 30, 88, 92),
+          P("Gareth Bale", "LW", 94, 84, 40, 95, 92),
+          P("Son Heung-min", "LW/RW", 90, 80, 38, 88, 88),
+                  P("Dele Alli", "CAM", 73, 86, 43, 70, 78),
+                  P("Kieran Trippier", "RB", 31, 62, 85, 82, 78),
+        ],
+        "20s": [
+          P("Guglielmo Vicario", "GK", 86, 78, 84, 68, 76),
+          P("Cristian Romero", "CB", 32, 64, 91, 90, 85),
+          P("Micky van de Ven", "CB", 25, 58, 89, 96, 82),
+          P("Pedro Porro", "RB", 45, 78, 80, 84, 78),
+          P("James Maddison", "CAM", 76, 90, 40, 72, 82),
+          P("Rodrigo Bentancur", "CM", 55, 80, 78, 80, 80),
+          P("Harry Kane", "ST", 96, 86, 30, 86, 91),
+          P("Son Heung-min", "LW/ST", 91, 82, 38, 87, 89),
+                  P("Dejan Kulusevski", "RW", 78, 75, 40, 83, 78),
+                  P("Destiny Udogie", "LB", 33, 65, 85, 85, 79),
+                  P("Yves Bissouma", "CDM", 43, 68, 86, 85, 80),
+                  P("Richarlison", "ST", 82, 60, 29, 83, 78),
+        ],
+      }},
+      "Newcastle United": { abbr: "NEW", c1: "#241F20", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Pavel Srnicek", "GK", 78, 72, 64, 74, 70),
+          P("Philippe Albert", "CB", 50, 72, 84, 82, 82),
+          P("Steve Howey", "CB", 25, 50, 83, 84, 78),
+          P("Rob Lee", "CM", 68, 80, 62, 80, 84),
+          P("David Ginola", "LW", 84, 90, 28, 80, 84),
+          P("Gary Speed", "CM", 68, 78, 72, 84, 88),
+          P("Alan Shearer", "ST", 98, 72, 35, 94, 96),
+          P("Les Ferdinand", "ST", 90, 64, 30, 92, 86),
+          P("Faustino Asprilla", "ST", 85, 82, 28, 86, 86),
+                  P("Warren Barton", "RB", 33, 60, 82, 82, 77),
+                  P("Keith Gillespie", "RW", 78, 73, 42, 83, 79),
+                  P("Peter Beardsley", "CAM", 76, 87, 44, 70, 78),
+        ],
+        "00s": [
+          P("Shay Given", "GK", 90, 86, 70, 72, 78),
+          P("Jonathan Woodgate", "CB", 25, 60, 89, 82, 82),
+          P("Steven Taylor", "CB", 26, 48, 81, 84, 78),
+          P("Nobby Solano", "RM", 70, 85, 50, 74, 81),
+          P("Kieron Dyer", "CM", 72, 78, 45, 90, 76),
+          P("Joey Barton", "CM", 60, 76, 68, 80, 75),
+          P("Alan Shearer", "ST", 93, 70, 35, 88, 94),
+          P("Craig Bellamy", "ST", 86, 74, 35, 92, 82),
+                  P("Laurent Robert", "LW", 78, 75, 41, 82, 78),
+                  P("Olivier Bernard", "LB", 35, 64, 83, 85, 80),
+                  P("Gary Speed", "CM", 61, 80, 71, 78, 80),
+                  P("Obafemi Martins", "ST", 83, 63, 29, 85, 80),
+        ],
+        "10s": [
+          P("Tim Krul", "GK", 84, 78, 70, 74, 78),
+          P("Fabricio Coloccini", "CB", 28, 62, 86, 80, 83),
+          P("Mathieu Debuchy", "RB", 32, 64, 81, 82, 76),
+          P("Yohan Cabaye", "CM", 70, 86, 65, 78, 83),
+          P("Cheick Tiote", "CDM", 35, 65, 88, 90, 84),
+          P("Hatem Ben Arfa", "RW", 80, 84, 30, 78, 76),
+          P("Demba Ba", "ST", 87, 62, 28, 86, 82),
+          P("Papiss Cisse", "ST", 84, 56, 25, 84, 81),
+                  P("Jonas Gutierrez", "LM", 71, 80, 47, 80, 80),
+                  P("Davide Santon", "LB", 33, 62, 82, 84, 79),
+                  P("Moussa Sissoko", "CM", 62, 80, 68, 78, 79),
+                  P("Loic Remy", "ST", 84, 64, 26, 83, 81),
+        ],
+        "20s": [
+          P("Nick Pope", "GK", 88, 82, 62, 80, 76),
+          P("Kieran Trippier", "RB", 45, 86, 84, 78, 86),
+          P("Sven Botman", "CB", 24, 58, 88, 88, 81),
+          P("Dan Burn", "LB", 26, 45, 83, 88, 82),
+          P("Bruno Guimaraes", "CM", 65, 88, 80, 84, 86),
+          P("Sandro Tonali", "CM", 62, 84, 78, 82, 82),
+          P("Joelinton", "CM", 60, 70, 78, 92, 81),
+          P("Alexander Isak", "ST", 93, 78, 28, 88, 87),
+          P("Miguel Almiron", "RW", 78, 68, 38, 88, 76),
+                  P("Fabian Schar", "CB", 26, 54, 88, 86, 83),
+                  P("Anthony Gordon", "LW", 76, 74, 38, 82, 78),
+                  P("Callum Wilson", "ST", 83, 60, 28, 83, 78),
+        ],
+      }},
+      "Everton": { abbr: "EVE", c1: "#003399", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Neville Southall", "GK", 93, 90, 58, 90, 92),
+          P("Dave Watson", "CB", 30, 48, 88, 86, 87),
+          P("Andy Hinchcliffe", "LB", 40, 78, 82, 80, 78),
+          P("Andrei Kanchelskis", "RW", 84, 78, 38, 90, 82),
+          P("Anders Limpar", "LW", 74, 84, 35, 76, 76),
+          P("Joe Parkinson", "CDM", 35, 58, 76, 80, 74),
+          P("Duncan Ferguson", "ST", 84, 58, 40, 95, 86),
+          P("Tony Cottee", "ST", 82, 64, 25, 72, 78),
+                  P("Earl Barrett", "RB", 32, 63, 83, 82, 80),
+                  P("Dave Unsworth", "LB", 34, 62, 84, 82, 77),
+                  P("Nick Barmby", "CAM", 74, 86, 46, 73, 80),
+                  P("Gary Speed", "CM", 61, 80, 71, 78, 80),
+        ],
+        "00s": [
+          P("Tim Howard", "GK", 85, 82, 72, 82, 78),
+          P("Joleon Lescott", "CB", 35, 55, 87, 88, 82),
+          P("Alan Stubbs", "CB", 30, 58, 84, 82, 83),
+          P("Tony Hibbert", "RB", 20, 48, 82, 80, 77),
+          P("Mikel Arteta", "CM", 68, 88, 60, 72, 84),
+          P("Tim Cahill", "CAM", 82, 68, 60, 86, 90),
+          P("Leon Osman", "RM", 62, 78, 55, 70, 76),
+          P("Wayne Rooney", "ST", 88, 80, 40, 88, 88),
+          P("Yakubu", "ST", 86, 58, 22, 88, 80),
+                  P("Phil Neville", "RB", 31, 61, 85, 85, 77),
+                  P("Lee Carsley", "CDM", 44, 71, 85, 84, 81),
+                  P("Andrew Johnson", "ST", 85, 63, 29, 82, 78),
+        ],
+        "10s": [
+          P("Tim Howard", "GK", 84, 80, 72, 80, 78),
+          P("Leighton Baines", "LB", 48, 88, 86, 80, 85),
+          P("Seamus Coleman", "RB", 42, 70, 86, 86, 86),
+          P("Phil Jagielka", "CB", 28, 50, 88, 84, 84),
+          P("Marouane Fellaini", "CM", 72, 62, 72, 94, 80),
+          P("Steven Pienaar", "LM", 66, 84, 52, 74, 80),
+          P("Ross Barkley", "CAM", 72, 80, 45, 84, 76),
+          P("Romelu Lukaku", "ST", 92, 64, 25, 94, 84),
+          P("Kevin Mirallas", "RW", 78, 70, 32, 82, 74),
+                  P("Sylvain Distin", "CB", 29, 50, 87, 86, 84),
+                  P("Gerard Deulofeu", "RW", 78, 75, 41, 85, 80),
+                  P("Gareth Barry", "CDM", 44, 68, 85, 84, 84),
+        ],
+        "20s": [
+          P("Jordan Pickford", "GK", 89, 78, 82, 72, 88),
+          P("James Tarkowski", "CB", 30, 50, 88, 88, 84),
+          P("Jarrad Branthwaite", "CB", 24, 52, 87, 88, 80),
+          P("Vitalii Mykolenko", "LB", 28, 60, 81, 82, 76),
+          P("Abdoulaye Doucoure", "CM", 62, 68, 74, 86, 80),
+          P("Idrissa Gueye", "CDM", 40, 66, 88, 84, 82),
+          P("Dwight McNeil", "LW", 68, 78, 45, 78, 76),
+          P("Dominic Calvert-Lewin", "ST", 80, 56, 28, 88, 78),
+          P("Richarlison", "ST", 83, 64, 35, 86, 81),
+                  P("Ashley Young", "RB", 30, 60, 84, 85, 78),
+                  P("Amadou Onana", "CM", 60, 77, 69, 81, 78),
+                  P("Demarai Gray", "LW", 74, 76, 40, 84, 76),
+        ],
+      }},
+      "Aston Villa": { abbr: "AVL", c1: "#670E36", c2: "#95BFE5", eras: {
+        "90s": [
+          P("Mark Bosnich", "GK", 86, 80, 66, 78, 80),
+          P("Paul McGrath", "CB", 30, 58, 95, 88, 93),
+          P("Gareth Southgate", "CB", 28, 62, 87, 80, 85),
+          P("Steve Staunton", "LB", 35, 68, 85, 80, 83),
+          P("Andy Townsend", "CM", 58, 76, 70, 80, 82),
+          P("Ian Taylor", "CM", 62, 68, 65, 80, 80),
+          P("Dwight Yorke", "ST", 88, 78, 30, 82, 86),
+          P("Dean Saunders", "ST", 84, 64, 28, 80, 81),
+                  P("Ugo Ehiogu", "CB", 27, 53, 85, 89, 84),
+                  P("Alan Wright", "LB", 32, 64, 82, 81, 80),
+                  P("Gary Charles", "RB", 34, 62, 83, 84, 80),
+                  P("Savo Milosevic", "ST", 85, 60, 26, 84, 79),
+        ],
+        "00s": [
+          P("Brad Friedel", "GK", 87, 86, 70, 82, 80),
+          P("Olof Mellberg", "CB", 28, 52, 89, 86, 85),
+          P("Martin Laursen", "CB", 30, 50, 88, 86, 84),
+          P("Gareth Barry", "CM", 58, 82, 76, 80, 84),
+          P("Ashley Young", "RW", 74, 84, 45, 84, 80),
+          P("Stiliyan Petrov", "CM", 60, 76, 65, 78, 80),
+          P("Gabriel Agbonlahor", "ST", 80, 60, 30, 92, 78),
+          P("John Carew", "ST", 82, 58, 28, 92, 78),
+                  P("Juan Pablo Angel", "ST", 85, 61, 28, 81, 79),
+                  P("James Milner", "RM", 71, 76, 45, 82, 77),
+                  P("Wilfred Bouma", "LB", 34, 65, 81, 84, 78),
+                  P("Luke Young", "RB", 30, 63, 84, 82, 79),
+        ],
+        "10s": [
+          P("Brad Guzan", "GK", 80, 76, 66, 74, 72),
+          P("Ron Vlaar", "CB", 26, 50, 85, 88, 81),
+          P("Ciaran Clark", "CB", 26, 48, 80, 82, 75),
+          P("Fabian Delph", "CM", 56, 74, 72, 82, 78),
+          P("Ashley Westwood", "CM", 48, 76, 62, 72, 72),
+          P("Jack Grealish", "CAM", 74, 86, 38, 80, 80),
+          P("Christian Benteke", "ST", 88, 60, 28, 94, 83),
+          P("Darren Bent", "ST", 85, 54, 22, 78, 80),
+                  P("Alan Hutton", "RB", 30, 62, 85, 86, 78),
+                  P("Stewart Downing", "LW", 77, 75, 41, 85, 77),
+                  P("Gabriel Agbonlahor", "ST", 85, 60, 28, 82, 80),
+                  P("Joleon Lescott", "CB", 26, 50, 86, 88, 82),
+        ],
+        "20s": [
+          P("Emiliano Martinez", "GK", 90, 84, 78, 84, 96),
+          P("Ezri Konsa", "CB", 26, 60, 87, 84, 80),
+          P("Tyrone Mings", "CB", 28, 54, 84, 88, 80),
+          P("Matty Cash", "RB", 40, 66, 81, 86, 77),
+          P("Lucas Digne", "LB", 38, 76, 81, 80, 78),
+          P("John McGinn", "CM", 66, 80, 70, 86, 85),
+          P("Douglas Luiz", "CDM", 62, 84, 72, 80, 80),
+          P("Ollie Watkins", "ST", 88, 72, 30, 90, 85),
+          P("Leon Bailey", "RW", 80, 72, 30, 88, 76),
+                  P("Boubacar Kamara", "CDM", 40, 68, 83, 84, 80),
+                  P("Emiliano Buendia", "CAM", 75, 84, 47, 71, 82),
+                  P("Jacob Ramsey", "CM", 59, 79, 68, 80, 82),
+        ],
+      }},
+      "West Ham United": { abbr: "WHU", c1: "#7A263A", c2: "#1BB1E7", eras: {
+        "90s": [
+          P("Ludek Miklosko", "GK", 83, 80, 62, 80, 76),
+          P("Rio Ferdinand", "CB", 30, 70, 90, 88, 84),
+          P("Julian Dicks", "LB", 50, 60, 84, 88, 84),
+          P("Frank Lampard", "CM", 76, 80, 55, 78, 82),
+          P("Eyal Berkovic", "CAM", 68, 86, 35, 66, 76),
+          P("Trevor Sinclair", "RM", 72, 72, 48, 84, 78),
+          P("Paolo Di Canio", "ST", 89, 84, 28, 80, 88),
+          P("John Hartson", "ST", 82, 60, 32, 88, 79),
+                  P("Slaven Bilic", "CB", 28, 54, 87, 86, 81),
+                  P("Tim Breacker", "RB", 30, 64, 83, 86, 78),
+                  P("Steve Lomas", "CM", 60, 76, 72, 81, 82),
+                  P("Marc-Vivien Foe", "CDM", 43, 70, 83, 84, 83),
+        ],
+        "00s": [
+          P("Robert Green", "GK", 82, 78, 68, 74, 68),
+          P("Matthew Upson", "CB", 26, 52, 84, 82, 79),
+          P("Anton Ferdinand", "CB", 26, 52, 80, 84, 75),
+          P("Joe Cole", "CAM", 76, 86, 40, 74, 82),
+          P("Michael Carrick", "CM", 50, 84, 70, 72, 78),
+          P("Yossi Benayoun", "RW", 70, 84, 38, 70, 78),
+          P("Carlos Tevez", "ST", 88, 78, 45, 90, 92),
+          P("Jermain Defoe", "ST", 87, 60, 22, 78, 82),
+          P("Dean Ashton", "ST", 82, 68, 28, 84, 78),
+                  P("Scott Parker", "CM", 61, 77, 69, 79, 79),
+                  P("Lucas Neill", "RB", 34, 60, 82, 82, 78),
+                  P("Marlon Harewood", "ST", 78, 61, 28, 83, 81),
+        ],
+        "10s": [
+          P("Lukasz Fabianski", "GK", 86, 82, 74, 76, 76),
+          P("Winston Reid", "CB", 28, 48, 85, 86, 81),
+          P("Aaron Cresswell", "LB", 38, 76, 81, 78, 78),
+          P("Pablo Zabaleta", "RB", 32, 64, 84, 82, 86),
+          P("Mark Noble", "CM", 56, 78, 70, 76, 86),
+          P("Dimitri Payet", "CAM", 82, 93, 35, 74, 85),
+          P("Manuel Lanzini", "CM", 70, 82, 40, 72, 76),
+          P("Marko Arnautovic", "ST", 84, 72, 32, 90, 78),
+          P("Andy Carroll", "ST", 80, 54, 35, 94, 76),
+                  P("James Tomkins", "CB", 27, 51, 88, 89, 80),
+                  P("Felipe Anderson", "LW", 78, 76, 38, 82, 76),
+                  P("Kevin Nolan", "CM", 62, 78, 72, 78, 81),
+        ],
+        "20s": [
+          P("Alphonse Areola", "GK", 84, 78, 76, 72, 74),
+          P("Kurt Zouma", "CB", 28, 48, 86, 90, 79),
+          P("Vladimir Coufal", "RB", 32, 68, 81, 82, 77),
+          P("Aaron Cresswell", "LB", 36, 74, 80, 76, 78),
+          P("Declan Rice", "CDM", 58, 78, 91, 90, 88),
+          P("Tomas Soucek", "CM", 66, 62, 76, 90, 80),
+          P("Lucas Paqueta", "CAM", 70, 88, 50, 78, 80),
+          P("Jarrod Bowen", "RW", 86, 76, 35, 86, 86),
+          P("Michail Antonio", "ST", 80, 62, 35, 94, 78),
+                  P("Craig Dawson", "CB", 27, 50, 84, 85, 84),
+                  P("Emerson Palmieri", "LB", 33, 66, 84, 82, 77),
+                  P("Said Benrahma", "LW", 75, 75, 40, 84, 76),
+        ],
+      }},
+      "Leeds United": { abbr: "LEE", c1: "#FFCD00", c2: "#1D428A", eras: {
+        "90s": [
+          P("Nigel Martyn", "GK", 89, 87, 68, 82, 82),
+          P("Lucas Radebe", "CB", 26, 54, 92, 88, 89),
+          P("Tony Dorigo", "LB", 38, 70, 83, 82, 79),
+          P("Gary Kelly", "RB", 28, 60, 83, 84, 79),
+          P("Gary McAllister", "CM", 70, 90, 60, 74, 88),
+          P("Gordon Strachan", "RM", 66, 86, 55, 74, 88),
+          P("David Batty", "CDM", 35, 70, 86, 84, 84),
+          P("Tony Yeboah", "ST", 90, 62, 28, 90, 84),
+          P("Jimmy Floyd Hasselbaink", "ST", 89, 66, 25, 86, 83),
+                  P("Gary Speed", "LM", 73, 80, 46, 80, 78),
+                  P("Rod Wallace", "ST", 84, 63, 29, 84, 79),
+                  P("Carlton Palmer", "CM", 60, 77, 70, 82, 81),
+        ],
+        "00s": [
+          P("Paul Robinson", "GK", 83, 78, 76, 76, 74),
+          P("Rio Ferdinand", "CB", 32, 72, 93, 88, 87),
+          P("Ian Harte", "LB", 48, 76, 79, 74, 79),
+          P("Jonathan Woodgate", "CB", 25, 60, 88, 82, 80),
+          P("Lee Bowyer", "CM", 72, 76, 60, 84, 80),
+          P("Olivier Dacourt", "CDM", 50, 74, 80, 84, 78),
+          P("Harry Kewell", "LW", 82, 80, 35, 84, 81),
+          P("Mark Viduka", "ST", 88, 76, 30, 90, 85),
+          P("Alan Smith", "ST", 78, 64, 50, 84, 82),
+                  P("Danny Mills", "RB", 32, 63, 83, 85, 80),
+                  P("Dominic Matteo", "CB", 26, 54, 84, 87, 81),
+                  P("Robbie Keane", "ST", 88, 67, 34, 80, 84),
+        ],
+        "20s": [
+          P("Illan Meslier", "GK", 78, 66, 76, 64, 60),
+          P("Pascal Struijk", "CB", 26, 56, 82, 84, 76),
+          P("Stuart Dallas", "RB", 40, 64, 78, 82, 79),
+          P("Kalvin Phillips", "CDM", 45, 78, 84, 82, 81),
+          P("Mateusz Klich", "CM", 62, 76, 58, 78, 75),
+          P("Raphinha", "RW", 86, 82, 38, 84, 83),
+          P("Patrick Bamford", "ST", 80, 64, 25, 80, 75),
+          P("Jack Harrison", "LW", 70, 72, 45, 82, 74),
+                  P("Luke Ayling", "RB", 33, 64, 84, 85, 78),
+                  P("Liam Cooper", "CB", 27, 53, 84, 86, 80),
+                  P("Rodrigo", "ST", 82, 63, 26, 82, 80),
+                  P("Tyler Adams", "CDM", 44, 71, 83, 86, 83),
+        ],
+      }},
+      "Blackburn Rovers": { abbr: "BLB", c1: "#009EE0", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Tim Flowers", "GK", 86, 84, 66, 80, 84),
+          P("Colin Hendry", "CB", 32, 48, 90, 88, 88),
+          P("Henning Berg", "CB", 26, 56, 87, 82, 82),
+          P("Graeme Le Saux", "LB", 38, 72, 85, 84, 82),
+          P("Tim Sherwood", "CM", 58, 76, 68, 80, 83),
+          P("Stuart Ripley", "RM", 66, 76, 45, 84, 76),
+          P("Jason Wilcox", "LW", 66, 74, 45, 82, 75),
+          P("Alan Shearer", "ST", 99, 72, 35, 94, 95),
+          P("Chris Sutton", "ST", 85, 66, 45, 88, 82),
+                  P("Jeff Kenna", "RB", 30, 62, 84, 86, 77),
+                  P("Kevin Gallacher", "ST", 86, 61, 26, 82, 81),
+                  P("Lars Bohinen", "CM", 60, 78, 69, 79, 79),
+        ],
+        "00s": [
+          P("Brad Friedel", "GK", 90, 88, 72, 84, 84),
+          P("Lucas Neill", "RB", 30, 56, 83, 84, 79),
+          P("Ryan Nelsen", "CB", 26, 48, 84, 86, 81),
+          P("Tugay Kerimoglu", "CM", 60, 90, 60, 70, 83),
+          P("Damien Duff", "LW", 76, 80, 40, 84, 80),
+          P("David Dunn", "CAM", 68, 80, 42, 76, 75),
+          P("David Bentley", "RW", 66, 82, 40, 74, 73),
+          P("Andy Cole", "ST", 84, 66, 28, 76, 80),
+          P("Roque Santa Cruz", "ST", 82, 64, 28, 86, 76),
+                  P("Brett Emerton", "RM", 71, 77, 44, 84, 78),
+                  P("Morten Gamst Pedersen", "LM", 72, 78, 46, 84, 80),
+                  P("Christopher Samba", "CB", 29, 50, 84, 87, 83),
+        ],
+      }},
+      "Leicester City": { abbr: "LEI", c1: "#003090", c2: "#FDBE11", eras: {
+        "90s": [
+          P("Kasey Keller", "GK", 84, 82, 64, 78, 76),
+          P("Matt Elliott", "CB", 34, 48, 86, 88, 83),
+          P("Steve Walsh", "CB", 30, 44, 84, 86, 84),
+          P("Muzzy Izzet", "CM", 64, 78, 58, 78, 79),
+          P("Neil Lennon", "CDM", 42, 72, 78, 78, 80),
+          P("Robbie Savage", "CM", 40, 64, 74, 84, 76),
+          P("Steve Guppy", "LM", 58, 78, 45, 76, 72),
+          P("Emile Heskey", "ST", 78, 60, 35, 92, 78),
+          P("Tony Cottee", "ST", 78, 60, 22, 68, 76),
+                  P("Frank Sinclair", "RB", 30, 60, 83, 85, 79),
+                  P("Garry Parker", "CM", 58, 80, 68, 80, 81),
+                  P("Ian Marshall", "ST", 74, 64, 27, 85, 80),
+        ],
+        "10s": [
+          P("Kasper Schmeichel", "GK", 88, 84, 76, 80, 92),
+          P("Wes Morgan", "CB", 28, 44, 87, 90, 87),
+          P("Robert Huth", "CB", 30, 42, 87, 92, 84),
+          P("Christian Fuchs", "LB", 36, 70, 82, 82, 80),
+          P("Danny Simpson", "RB", 22, 50, 81, 82, 78),
+          P("N'Golo Kante", "CDM", 45, 74, 96, 92, 90),
+          P("Danny Drinkwater", "CM", 54, 78, 70, 78, 78),
+          P("Marc Albrighton", "LM", 58, 76, 52, 80, 78),
+          P("Riyad Mahrez", "RW", 90, 88, 35, 78, 88),
+          P("Jamie Vardy", "ST", 94, 62, 30, 94, 92),
+                  P("Shinji Okazaki", "ST", 83, 63, 28, 85, 79),
+                  P("Jeffrey Schlupp", "LB", 34, 66, 84, 83, 81),
+        ],
+        "20s": [
+          P("Kasper Schmeichel", "GK", 84, 80, 74, 78, 86),
+          P("Caglar Soyuncu", "CB", 26, 52, 85, 88, 79),
+          P("Wesley Fofana", "CB", 24, 52, 87, 90, 79),
+          P("James Justin", "RB", 36, 62, 80, 84, 76),
+          P("Youri Tielemans", "CM", 66, 88, 62, 78, 86),
+          P("James Maddison", "CAM", 76, 88, 40, 72, 82),
+          P("Wilfred Ndidi", "CDM", 40, 62, 88, 88, 80),
+          P("Jamie Vardy", "ST", 88, 60, 28, 88, 90),
+          P("Harvey Barnes", "LW", 80, 68, 30, 86, 76),
+                  P("Ricardo Pereira", "RB", 36, 68, 87, 89, 86),
+                  P("Kelechi Iheanacho", "ST", 85, 62, 29, 85, 80),
+                  P("Ayoze Perez", "RW", 77, 74, 41, 85, 77),
+        ],
+      }},
+      "Southampton": { abbr: "SOU", c1: "#D71920", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Dave Beasant", "GK", 79, 74, 62, 78, 74),
+          P("Francis Benali", "LB", 20, 42, 78, 84, 80),
+          P("Jason Dodd", "RB", 26, 54, 78, 78, 76),
+          P("Ken Monkou", "CB", 26, 44, 80, 86, 76),
+          P("Matt Le Tissier", "CAM", 94, 95, 25, 60, 92),
+          P("Carlton Palmer", "CM", 44, 58, 72, 84, 72),
+          P("Egil Ostenstad", "ST", 74, 58, 25, 80, 72),
+          P("Marian Pahars", "ST", 76, 62, 22, 76, 74),
+                  P("Claus Lundekvam", "CB", 28, 50, 85, 85, 83),
+                  P("Matt Oakley", "CM", 60, 77, 68, 81, 81),
+                  P("Mark Hughes", "ST", 78, 62, 29, 85, 82),
+                  P("Hassan Kachloul", "LM", 71, 77, 43, 82, 80),
+        ],
+        "00s": [
+          P("Antti Niemi", "GK", 86, 82, 66, 74, 76),
+          P("Claus Lundekvam", "CB", 22, 48, 82, 82, 78),
+          P("Michael Svensson", "CB", 24, 44, 83, 84, 79),
+          P("Anders Svensson", "CM", 58, 76, 55, 72, 75),
+          P("Chris Marsden", "LM", 44, 66, 66, 76, 76),
+          P("Fabrice Fernandes", "RM", 56, 72, 40, 76, 70),
+          P("James Beattie", "ST", 84, 58, 28, 86, 80),
+          P("Kevin Phillips", "ST", 82, 62, 22, 70, 80),
+          P("Peter Crouch", "ST", 78, 66, 28, 84, 76),
+                  P("Wayne Bridge", "LB", 39, 68, 86, 84, 76),
+                  P("Brett Ormerod", "ST", 83, 62, 27, 82, 79),
+                  P("Paul Telfer", "RB", 32, 63, 81, 84, 78),
+        ],
+        "10s": [
+          P("Fraser Forster", "GK", 85, 78, 62, 82, 74),
+          P("Virgil van Dijk", "CB", 36, 74, 94, 92, 88),
+          P("Jose Fonte", "CB", 28, 54, 85, 84, 84),
+          P("Luke Shaw", "LB", 38, 70, 81, 84, 76),
+          P("Nathaniel Clyne", "RB", 30, 60, 83, 86, 78),
+          P("Adam Lallana", "CAM", 70, 84, 48, 76, 80),
+          P("Morgan Schneiderlin", "CDM", 50, 76, 82, 82, 79),
+          P("James Ward-Prowse", "CM", 66, 86, 58, 74, 80),
+          P("Sadio Mane", "RW", 86, 72, 35, 90, 84),
+          P("Rickie Lambert", "ST", 82, 70, 25, 82, 81),
+          P("Dusan Tadic", "LW", 76, 84, 32, 72, 78),
+                  P("Victor Wanyama", "CDM", 45, 75, 91, 91, 87),
+        ],
+        "20s": [
+          P("Alex McCarthy", "GK", 78, 72, 64, 70, 64),
+          P("Jan Bednarek", "CB", 24, 48, 82, 84, 76),
+          P("Kyle Walker-Peters", "RB", 34, 64, 79, 84, 75),
+          P("James Ward-Prowse", "CM", 68, 88, 60, 76, 84),
+          P("Romeo Lavia", "CDM", 40, 68, 76, 80, 70),
+          P("Stuart Armstrong", "CM", 62, 72, 52, 76, 72),
+          P("Nathan Redmond", "LW", 64, 70, 35, 80, 72),
+          P("Danny Ings", "ST", 84, 64, 28, 80, 80),
+          P("Che Adams", "ST", 76, 60, 26, 82, 73),
+                  P("Mohammed Salisu", "CB", 29, 52, 85, 89, 80),
+                  P("Tino Livramento", "RB", 32, 64, 85, 84, 80),
+                  P("Theo Walcott", "RW", 72, 70, 40, 78, 74),
+        ],
+      }},
+    }
+  },
+  cl: {
+    label: "Champions League",
+    target: 13,
+    targetLabel: "13-0",
+    eras: ["60s", "70s", "80s", "90s", "00s", "10s", "20s"],
+    clubs: {
+      "Real Madrid": { abbr: "RMA", c1: "#FEBE10", c2: "#00529F", eras: {
+        "60s": [
+          P("Antonio Betancort", "GK", 82, 78, 52, 76, 80),
+          P("Jose Santamaria", "CB", 28, 55, 94, 88, 92),
+          P("Pachin", "RB", 24, 48, 84, 84, 80),
+          P("Ignacio Zoco", "CDM", 40, 66, 84, 84, 82),
+          P("Luis del Sol", "CM", 64, 86, 60, 78, 84),
+          P("Alfredo Di Stefano", "ST/CAM", 97, 96, 55, 88, 97),
+          P("Ferenc Puskas", "ST", 98, 88, 25, 74, 96),
+          P("Francisco Gento", "LW", 88, 84, 30, 94, 92),
+                  P("Amancio Amaro", "RW", 82, 81, 45, 88, 81),
+                  P("Pirri", "CM", 65, 81, 75, 84, 86),
+                  P("Manuel Velazquez", "CM", 61, 80, 72, 80, 80),
+                  P("Jose Araquistain", "GK", 76, 74, 50, 72, 74),
+        ],
+        "80s": [
+          P("Paco Buyo", "GK", 85, 80, 55, 74, 76),
+          P("Manolo Sanchis", "CB", 30, 60, 90, 84, 88),
+          P("Jose Antonio Camacho", "LB", 28, 54, 88, 88, 88),
+          P("Chendo", "RB", 24, 52, 84, 82, 80),
+          P("Michel", "RM", 76, 92, 50, 76, 86),
+          P("Rafael Martin Vazquez", "CM", 70, 86, 48, 76, 80),
+          P("Emilio Butragueno", "ST", 93, 84, 28, 78, 90),
+          P("Hugo Sanchez", "ST", 97, 66, 25, 88, 92),
+                  P("Santillana", "ST", 88, 65, 33, 89, 84),
+                  P("Juanito", "RW", 83, 80, 45, 91, 85),
+                  P("Ricardo Gallego", "CDM", 43, 72, 85, 82, 82),
+                  P("Uli Stielike", "CDM", 46, 77, 90, 87, 88),
+        ],
+        "90s": [
+          P("Bodo Illgner", "GK", 84, 82, 62, 78, 82),
+          P("Fernando Hierro", "CB", 55, 78, 92, 86, 92),
+          P("Roberto Carlos", "LB", 60, 80, 85, 96, 90),
+          P("Fernando Redondo", "CDM", 50, 92, 84, 80, 90),
+          P("Clarence Seedorf", "CM", 68, 88, 62, 84, 88),
+          P("Raul", "ST", 93, 84, 30, 80, 94),
+          P("Predrag Mijatovic", "ST", 87, 78, 28, 80, 88),
+          P("Davor Suker", "ST", 90, 74, 25, 76, 88),
+                  P("Ivan Zamorano", "ST", 91, 69, 34, 89, 87),
+                  P("Michael Laudrup", "CAM", 77, 90, 49, 79, 86),
+                  P("Chendo", "RB", 31, 64, 81, 84, 79),
+                  P("Santiago Canizares", "GK", 85, 80, 60, 74, 74),
+        ],
+        "00s": [
+          P("Iker Casillas", "GK", 95, 88, 68, 78, 95),
+          P("Roberto Carlos", "LB", 58, 80, 84, 94, 90),
+          P("Sergio Ramos", "RB", 45, 64, 90, 90, 90),
+          P("Fabio Cannavaro", "CB", 26, 58, 94, 86, 92),
+          P("Zinedine Zidane", "CAM", 86, 99, 45, 86, 98),
+          P("Luis Figo", "RW", 84, 94, 40, 80, 90),
+          P("David Beckham", "RM", 76, 94, 50, 76, 88),
+          P("Ronaldo Nazario", "ST", 96, 84, 22, 90, 94),
+          P("Raul", "ST", 91, 82, 30, 78, 93),
+                  P("Guti", "CM", 63, 81, 73, 87, 83),
+                  P("Michel Salgado", "RB", 36, 65, 86, 87, 82),
+                  P("Ivan Helguera", "CB", 33, 55, 91, 94, 87),
+        ],
+        "10s": [
+          P("Keylor Navas", "GK", 92, 84, 70, 78, 93),
+          P("Sergio Ramos", "CB", 50, 68, 95, 92, 98),
+          P("Marcelo", "LB", 55, 86, 80, 86, 89),
+          P("Dani Carvajal", "RB", 36, 72, 88, 86, 88),
+          P("Luka Modric", "CM", 70, 97, 65, 76, 95),
+          P("Toni Kroos", "CM", 68, 97, 60, 74, 94),
+          P("Cristiano Ronaldo", "LW/ST", 99, 86, 32, 95, 99),
+          P("Karim Benzema", "ST", 92, 88, 28, 84, 91),
+          P("Gareth Bale", "RW", 90, 80, 35, 94, 93),
+                  P("Isco", "CAM", 78, 89, 48, 76, 85),
+                  P("Casemiro", "CDM", 46, 77, 89, 91, 86),
+                  P("Raphael Varane", "CB", 30, 59, 92, 90, 87),
+        ],
+        "20s": [
+          P("Thibaut Courtois", "GK", 95, 90, 78, 90, 95),
+          P("Antonio Rudiger", "CB", 28, 56, 91, 92, 88),
+          P("Dani Carvajal", "RB", 38, 72, 88, 84, 90),
+          P("Ferland Mendy", "LB", 30, 58, 86, 90, 80),
+          P("Federico Valverde", "CM", 72, 84, 78, 94, 88),
+          P("Jude Bellingham", "CAM", 84, 88, 70, 88, 93),
+          P("Eduardo Camavinga", "CDM", 50, 78, 82, 88, 82),
+          P("Vinicius Junior", "LW", 93, 86, 30, 92, 95),
+          P("Rodrygo", "RW", 85, 80, 32, 84, 90),
+          P("Kylian Mbappe", "ST/LW", 97, 86, 28, 96, 93),
+                  P("Luka Modric", "CM", 65, 82, 74, 86, 85),
+                  P("Toni Kroos", "CM", 66, 82, 73, 83, 87),
+        ],
+      }},
+      "Barcelona": { abbr: "BAR", c1: "#A50044", c2: "#004D98", eras: {
+        "70s": [
+          P("Salvador Sadurni", "GK", 82, 80, 52, 76, 74),
+          P("Migueli", "CB", 26, 50, 89, 90, 85),
+          P("Joaquim Rife", "RB", 32, 60, 82, 80, 80),
+          P("Johan Neeskens", "CM", 74, 86, 78, 90, 90),
+          P("Juan Manuel Asensi", "CM", 66, 80, 58, 78, 80),
+          P("Johan Cruyff", "ST/CAM", 96, 99, 45, 86, 96),
+          P("Carles Rexach", "RW", 80, 84, 30, 70, 80),
+                  P("Hugo Sotil", "ST", 90, 65, 30, 90, 84),
+                  P("Marcial", "CM", 58, 80, 72, 82, 82),
+                  P("Antonio de la Cruz", "CB", 26, 51, 88, 87, 80),
+                  P("Pedro Maria Artola", "GK", 78, 76, 54, 72, 70),
+                  P("Juan Carlos Heredia", "RW", 75, 72, 38, 83, 77),
+        ],
+        "80s": [
+          P("Urruti", "GK", 84, 80, 55, 76, 80),
+          P("Jose Ramon Alexanko", "CB", 30, 52, 86, 84, 84),
+          P("Julio Alberto", "LB", 34, 62, 82, 84, 78),
+          P("Bernd Schuster", "CM", 76, 95, 55, 78, 86),
+          P("Victor Munoz", "CDM", 48, 72, 76, 80, 78),
+          P("Diego Maradona", "CAM", 97, 98, 40, 88, 90),
+          P("Lobo Carrasco", "LW", 76, 78, 32, 80, 76),
+                  P("Migueli", "CB", 34, 56, 90, 94, 87),
+                  P("Andoni Zubizarreta", "GK", 88, 86, 58, 82, 78),
+                  P("Gary Lineker", "ST", 90, 65, 30, 88, 85),
+                  P("Steve Archibald", "ST", 85, 64, 27, 82, 79),
+                  P("Julio Salinas", "ST", 83, 63, 28, 82, 80),
+        ],
+        "90s": [
+          P("Andoni Zubizarreta", "GK", 87, 86, 62, 82, 82),
+          P("Ronald Koeman", "CB", 70, 88, 86, 78, 92),
+          P("Miguel Angel Nadal", "CB", 30, 54, 88, 90, 82),
+          P("Sergi Barjuan", "LB", 30, 62, 84, 84, 80),
+          P("Pep Guardiola", "CDM", 45, 95, 70, 68, 88),
+          P("Michael Laudrup", "CAM", 82, 97, 40, 76, 90),
+          P("Jose Mari Bakero", "CM", 68, 78, 58, 76, 82),
+          P("Hristo Stoichkov", "ST", 94, 84, 30, 84, 92),
+          P("Romario", "ST", 97, 80, 20, 80, 92),
+          P("Rivaldo", "LW", 93, 90, 28, 82, 91),
+                  P("Gheorghe Hagi", "CAM", 77, 90, 51, 79, 86),
+                  P("Luis Figo", "RW", 83, 78, 44, 87, 83),
+        ],
+        "00s": [
+          P("Victor Valdes", "GK", 88, 82, 84, 76, 86),
+          P("Carles Puyol", "CB", 32, 60, 96, 90, 96),
+          P("Rafael Marquez", "CB", 40, 78, 88, 82, 84),
+          P("Gianluca Zambrotta", "RB", 32, 68, 87, 84, 84),
+          P("Xavi", "CM", 62, 99, 58, 70, 96),
+          P("Deco", "CAM", 72, 92, 55, 78, 88),
+          P("Andres Iniesta", "CM", 70, 97, 50, 72, 95),
+          P("Ronaldinho", "LW/CAM", 94, 97, 30, 86, 94),
+          P("Samuel Eto'o", "ST", 95, 74, 35, 92, 93),
+          P("Lionel Messi", "RW", 94, 90, 30, 88, 90),
+                  P("Thierry Henry", "ST/LW", 87, 84, 33, 90, 86),
+                  P("Yaya Toure", "CDM", 49, 74, 90, 91, 86),
+        ],
+        "10s": [
+          P("Marc-Andre ter Stegen", "GK", 90, 86, 92, 78, 86),
+          P("Gerard Pique", "CB", 40, 76, 93, 88, 91),
+          P("Jordi Alba", "LB", 48, 82, 84, 90, 86),
+          P("Dani Alves", "RB", 52, 86, 84, 88, 90),
+          P("Andres Iniesta", "CM", 68, 97, 50, 70, 96),
+          P("Sergio Busquets", "CDM", 40, 94, 88, 76, 92),
+          P("Ivan Rakitic", "CM", 64, 86, 62, 78, 84),
+          P("Lionel Messi", "RW/CAM", 99, 99, 32, 88, 98),
+          P("Luis Suarez", "ST", 96, 86, 38, 88, 93),
+          P("Neymar", "LW", 94, 92, 30, 88, 92),
+                  P("Xavi", "CM", 66, 83, 75, 83, 86),
+                  P("Carles Puyol", "CB", 33, 58, 90, 94, 89),
+        ],
+        "20s": [
+          P("Marc-Andre ter Stegen", "GK", 88, 82, 91, 76, 78),
+          P("Ronald Araujo", "CB", 30, 54, 91, 93, 85),
+          P("Jules Kounde", "RB", 30, 70, 89, 88, 83),
+          P("Alejandro Balde", "LB", 34, 64, 80, 90, 76),
+          P("Pedri", "CM", 66, 95, 55, 72, 86),
+          P("Gavi", "CM", 60, 84, 65, 84, 84),
+          P("Frenkie de Jong", "CDM", 58, 90, 70, 82, 82),
+          P("Robert Lewandowski", "ST", 96, 76, 28, 86, 92),
+          P("Lamine Yamal", "RW", 90, 93, 28, 80, 92),
+          P("Raphinha", "LW", 88, 82, 35, 86, 88),
+                  P("Ousmane Dembele", "RW", 83, 78, 46, 87, 81),
+                  P("Sergio Busquets", "CDM", 45, 74, 91, 88, 86),
+        ],
+      }},
+      "Bayern Munich": { abbr: "BAY", c1: "#DC052D", c2: "#FFFFFF", eras: {
+        "70s": [
+          P("Sepp Maier", "GK", 94, 93, 58, 88, 94),
+          P("Franz Beckenbauer", "CB", 55, 92, 98, 88, 98),
+          P("Hans-Georg Schwarzenbeck", "CB", 24, 48, 88, 86, 85),
+          P("Paul Breitner", "LB", 56, 84, 84, 86, 90),
+          P("Franz Roth", "CM", 62, 68, 74, 88, 88),
+          P("Rainer Zobel", "CM", 44, 66, 70, 78, 74),
+          P("Gerd Muller", "ST", 99, 60, 25, 84, 98),
+          P("Uli Hoeness", "RW", 82, 78, 35, 90, 84),
+                  P("Jupp Kapellmann", "RM", 70, 76, 45, 80, 77),
+                  P("Conny Torstensson", "ST", 84, 61, 27, 84, 79),
+                  P("Johnny Hansen", "RB", 32, 60, 81, 85, 79),
+                  P("Bernd Durnberger", "CM", 59, 80, 72, 79, 81),
+        ],
+        "80s": [
+          P("Jean-Marie Pfaff", "GK", 88, 85, 56, 82, 80),
+          P("Klaus Augenthaler", "CB", 40, 66, 91, 86, 89),
+          P("Hans Pflugler", "LB", 30, 54, 82, 84, 79),
+          P("Lothar Matthaus", "CM", 78, 88, 80, 92, 95),
+          P("Soren Lerby", "CM", 62, 80, 68, 82, 82),
+          P("Karl-Heinz Rummenigge", "ST", 95, 84, 30, 88, 93),
+          P("Dieter Hoeness", "ST", 80, 60, 30, 86, 82),
+                  P("Wolfgang Dremmler", "CDM", 44, 68, 86, 84, 82),
+                  P("Roland Wohlfarth", "ST", 84, 60, 29, 85, 80),
+                  P("Norbert Eder", "CB", 26, 53, 86, 88, 84),
+                  P("Raimond Aumann", "GK", 82, 80, 54, 78, 76),
+                  P("Ludwig Kogl", "LW", 74, 75, 41, 84, 78),
+        ],
+        "90s": [
+          P("Oliver Kahn", "GK", 94, 90, 60, 90, 88),
+          P("Lothar Matthaus", "CB", 60, 86, 90, 84, 94),
+          P("Bixente Lizarazu", "LB", 40, 74, 87, 86, 85),
+          P("Markus Babbel", "RB", 28, 56, 85, 84, 80),
+          P("Stefan Effenberg", "CM", 70, 86, 74, 86, 93),
+          P("Mehmet Scholl", "CAM", 74, 88, 40, 70, 82),
+          P("Jurgen Klinsmann", "ST", 91, 74, 30, 86, 90),
+          P("Giovane Elber", "ST", 86, 70, 26, 84, 82),
+                  P("Thomas Helmer", "CB", 33, 57, 90, 91, 89),
+                  P("Mario Basler", "RW", 80, 78, 45, 90, 81),
+                  P("Carsten Jancker", "ST", 85, 61, 29, 83, 80),
+                  P("Samuel Kuffour", "CB", 31, 59, 92, 90, 89),
+        ],
+        "00s": [
+          P("Oliver Kahn", "GK", 96, 92, 62, 93, 92),
+          P("Lucio", "CB", 42, 60, 92, 94, 88),
+          P("Willy Sagnol", "RB", 30, 70, 86, 82, 82),
+          P("Michael Ballack", "CM", 84, 86, 70, 88, 92),
+          P("Bastian Schweinsteiger", "RM", 66, 84, 74, 84, 90),
+          P("Ze Roberto", "LM", 64, 84, 64, 84, 82),
+          P("Roy Makaay", "ST", 90, 64, 22, 78, 85),
+          P("Claudio Pizarro", "ST", 84, 70, 25, 80, 80),
+                  P("Hasan Salihamidzic", "RM", 74, 79, 47, 83, 79),
+                  P("Owen Hargreaves", "CDM", 46, 76, 88, 90, 89),
+                  P("Bixente Lizarazu", "LB", 40, 67, 90, 88, 82),
+                  P("Giovane Elber", "ST", 91, 69, 33, 87, 83),
+        ],
+        "10s": [
+          P("Manuel Neuer", "GK", 94, 92, 96, 95, 96),
+          P("Philipp Lahm", "RB", 40, 88, 92, 82, 94),
+          P("Jerome Boateng", "CB", 28, 74, 90, 90, 86),
+          P("David Alaba", "LB", 45, 80, 88, 88, 87),
+          P("Thiago Alcantara", "CM", 62, 95, 64, 72, 85),
+          P("Javi Martinez", "CDM", 42, 70, 88, 90, 86),
+          P("Thomas Muller", "CAM/ST", 88, 88, 40, 80, 93),
+          P("Robert Lewandowski", "ST", 98, 78, 28, 88, 94),
+          P("Arjen Robben", "RW", 93, 86, 35, 86, 95),
+          P("Franck Ribery", "LW", 90, 90, 35, 86, 92),
+                  P("Mario Gotze", "CAM", 80, 92, 48, 78, 83),
+                  P("Xabi Alonso", "CDM", 46, 75, 91, 90, 87),
+        ],
+        "20s": [
+          P("Manuel Neuer", "GK", 88, 86, 90, 88, 88),
+          P("Alphonso Davies", "LB", 45, 72, 85, 97, 84),
+          P("Dayot Upamecano", "CB", 26, 58, 87, 90, 80),
+          P("Matthijs de Ligt", "CB", 30, 60, 88, 90, 82),
+          P("Joshua Kimmich", "CDM", 60, 92, 82, 82, 90),
+          P("Leon Goretzka", "CM", 70, 78, 74, 90, 84),
+          P("Jamal Musiala", "CAM", 82, 88, 45, 80, 86),
+          P("Harry Kane", "ST", 96, 86, 30, 86, 90),
+          P("Leroy Sane", "RW", 86, 80, 30, 92, 82),
+          P("Kingsley Coman", "LW", 82, 76, 32, 90, 88),
+                  P("Thomas Muller", "CAM/ST", 77, 91, 49, 77, 86),
+                  P("Serge Gnabry", "RW", 83, 77, 46, 89, 83),
+        ],
+      }},
+      "AC Milan": { abbr: "MIL", c1: "#FB090B", c2: "#000000", eras: {
+        "60s": [
+          P("Fabio Cudicini", "GK", 86, 84, 52, 82, 86),
+          P("Cesare Maldini", "CB", 28, 62, 90, 82, 90),
+          P("Karl-Heinz Schnellinger", "CB", 26, 56, 88, 86, 84),
+          P("Giovanni Trapattoni", "CDM", 38, 68, 88, 82, 86),
+          P("Gianni Rivera", "CAM", 84, 96, 40, 70, 92),
+          P("Jose Altafini", "ST", 94, 70, 25, 84, 90),
+          P("Pierino Prati", "ST", 88, 64, 26, 84, 86),
+                  P("Giovanni Lodetti", "CM", 62, 78, 68, 79, 82),
+                  P("Angelo Sormani", "ST", 84, 64, 27, 85, 80),
+                  P("Kurt Hamrin", "RW", 83, 80, 43, 89, 81),
+                  P("Angelo Anquilletti", "RB", 30, 63, 82, 84, 80),
+                  P("Roberto Rosato", "CB", 33, 56, 90, 92, 87),
+        ],
+        "80s": [
+          P("Giovanni Galli", "GK", 84, 83, 56, 80, 84),
+          P("Franco Baresi", "CB", 35, 80, 99, 84, 97),
+          P("Paolo Maldini", "LB", 35, 74, 97, 90, 95),
+          P("Mauro Tassotti", "RB", 28, 62, 89, 84, 84),
+          P("Frank Rijkaard", "CDM", 62, 84, 90, 92, 92),
+          P("Carlo Ancelotti", "CM", 56, 86, 72, 78, 88),
+          P("Roberto Donadoni", "RM", 70, 86, 50, 80, 84),
+          P("Marco van Basten", "ST", 99, 88, 30, 88, 96),
+          P("Ruud Gullit", "CAM/ST", 92, 90, 55, 95, 94),
+                  P("Pietro Paolo Virdis", "ST", 89, 65, 33, 87, 85),
+                  P("Alessandro Costacurta", "CB", 34, 58, 89, 92, 87),
+                  P("Angelo Colombo", "RM", 74, 80, 45, 83, 78),
+        ],
+        "90s": [
+          P("Sebastiano Rossi", "GK", 85, 84, 54, 82, 80),
+          P("Paolo Maldini", "LB", 35, 76, 98, 90, 96),
+          P("Alessandro Costacurta", "CB", 26, 62, 92, 84, 89),
+          P("Marcel Desailly", "CDM", 45, 70, 93, 94, 90),
+          P("Demetrio Albertini", "CM", 56, 88, 70, 76, 85),
+          P("Zvonimir Boban", "CAM", 72, 88, 55, 78, 86),
+          P("George Weah", "ST", 94, 80, 30, 94, 91),
+          P("Dejan Savicevic", "RW", 88, 90, 28, 74, 90),
+                  P("Roberto Donadoni", "RM", 75, 82, 50, 89, 84),
+                  P("Franco Baresi", "CB", 32, 56, 92, 94, 87),
+                  P("Daniele Massaro", "ST", 87, 65, 30, 90, 87),
+                  P("Mauro Tassotti", "RB", 38, 66, 89, 89, 84),
+        ],
+        "00s": [
+          P("Dida", "GK", 90, 80, 66, 80, 90),
+          P("Alessandro Nesta", "CB", 28, 72, 97, 88, 92),
+          P("Cafu", "RB", 45, 78, 87, 92, 90),
+          P("Jaap Stam", "CB", 24, 58, 93, 92, 88),
+          P("Andrea Pirlo", "CDM", 70, 99, 50, 68, 95),
+          P("Kaka", "CAM", 92, 92, 38, 90, 94),
+          P("Gennaro Gattuso", "CM", 35, 64, 92, 90, 90),
+          P("Clarence Seedorf", "CM", 70, 88, 60, 84, 90),
+          P("Andriy Shevchenko", "ST", 96, 76, 28, 88, 94),
+          P("Filippo Inzaghi", "ST", 91, 56, 20, 74, 93),
+                  P("Paolo Maldini", "CB", 32, 55, 93, 90, 85),
+                  P("Rui Costa", "CAM", 81, 93, 50, 76, 83),
+        ],
+        "20s": [
+          P("Mike Maignan", "GK", 91, 86, 90, 84, 86),
+          P("Theo Hernandez", "LB", 55, 76, 84, 94, 85),
+          P("Fikayo Tomori", "CB", 25, 54, 87, 90, 81),
+          P("Davide Calabria", "RB", 30, 62, 82, 82, 79),
+          P("Sandro Tonali", "CM", 60, 82, 80, 84, 84),
+          P("Franck Kessie", "CM", 60, 70, 80, 90, 82),
+          P("Rafael Leao", "LW", 88, 80, 28, 93, 84),
+          P("Olivier Giroud", "ST", 84, 72, 30, 84, 88),
+          P("Zlatan Ibrahimovic", "ST", 84, 80, 32, 84, 90),
+                  P("Ismael Bennacer", "CDM", 44, 71, 86, 84, 83),
+                  P("Simon Kjaer", "CB", 25, 53, 84, 88, 81),
+                  P("Brahim Diaz", "CAM", 73, 88, 47, 70, 80),
+        ],
+      }},
+      "Inter Milan": { abbr: "INT", c1: "#0068A8", c2: "#000000", eras: {
+        "60s": [
+          P("Giuliano Sarti", "GK", 88, 88, 54, 82, 90),
+          P("Giacinto Facchetti", "LB", 55, 72, 93, 92, 94),
+          P("Tarcisio Burgnich", "RB", 22, 50, 91, 88, 87),
+          P("Armando Picchi", "CB", 24, 60, 92, 82, 88),
+          P("Luis Suarez Miramontes", "CM", 72, 95, 55, 74, 90),
+          P("Mario Corso", "LM", 70, 88, 40, 70, 84),
+          P("Sandro Mazzola", "ST", 90, 86, 40, 82, 93),
+          P("Jair da Costa", "RW", 82, 74, 28, 88, 82),
+                  P("Angelo Domenghini", "RW", 79, 78, 46, 90, 84),
+                  P("Aristide Guarneri", "CB", 29, 50, 86, 86, 80),
+                  P("Gianfranco Bedin", "CDM", 40, 72, 82, 84, 83),
+                  P("Joaquin Peiro", "ST", 85, 62, 26, 84, 80),
+        ],
+        "90s": [
+          P("Gianluca Pagliuca", "GK", 88, 84, 58, 80, 84),
+          P("Giuseppe Bergomi", "CB", 26, 58, 92, 84, 91),
+          P("Javier Zanetti", "RB", 45, 78, 90, 92, 93),
+          P("Youri Djorkaeff", "CAM", 84, 86, 38, 78, 86),
+          P("Diego Simeone", "CM", 58, 72, 84, 88, 90),
+          P("Ronaldo Nazario", "ST", 99, 88, 22, 97, 94),
+          P("Ivan Zamorano", "ST", 84, 64, 32, 88, 86),
+                  P("Nicola Berti", "CM", 59, 77, 71, 80, 79),
+                  P("Dennis Bergkamp", "ST/CAM", 90, 88, 30, 90, 86),
+                  P("Paul Ince", "CM", 62, 80, 76, 86, 85),
+                  P("Aron Winter", "CM", 61, 79, 69, 80, 80),
+                  P("Wim Jonk", "CM", 61, 76, 72, 81, 80),
+        ],
+        "00s": [
+          P("Francesco Toldo", "GK", 87, 84, 58, 80, 82),
+          P("Marco Materazzi", "CB", 40, 50, 88, 92, 88),
+          P("Ivan Cordoba", "CB", 28, 54, 89, 88, 85),
+          P("Dejan Stankovic", "CM", 72, 84, 62, 82, 86),
+          P("Esteban Cambiasso", "CDM", 56, 82, 84, 80, 88),
+          P("Adriano", "ST", 93, 70, 25, 95, 84),
+          P("Christian Vieri", "ST", 92, 60, 25, 92, 86),
+          P("Zlatan Ibrahimovic", "ST", 91, 82, 30, 92, 88),
+                  P("Luis Figo", "RW", 83, 78, 44, 87, 83),
+                  P("Patrick Vieira", "CM", 67, 84, 75, 84, 84),
+                  P("Maicon", "RB", 37, 68, 86, 87, 82),
+                  P("Hernan Crespo", "ST", 91, 65, 31, 87, 86),
+        ],
+        "10s": [
+          P("Julio Cesar", "GK", 91, 86, 66, 82, 92),
+          P("Maicon", "RB", 55, 76, 86, 92, 89),
+          P("Lucio", "CB", 40, 58, 91, 92, 88),
+          P("Walter Samuel", "CB", 26, 50, 92, 90, 88),
+          P("Javier Zanetti", "LB", 42, 78, 88, 90, 93),
+          P("Wesley Sneijder", "CAM", 82, 94, 45, 74, 93),
+          P("Diego Milito", "ST", 90, 72, 26, 80, 95),
+          P("Samuel Eto'o", "RW/ST", 91, 74, 45, 90, 91),
+          P("Mauro Icardi", "ST", 88, 58, 20, 80, 82),
+                  P("Goran Pandev", "ST", 86, 63, 27, 83, 79),
+                  P("Esteban Cambiasso", "CDM", 45, 73, 89, 88, 87),
+                  P("Andrea Ranocchia", "CB", 26, 52, 88, 86, 84),
+        ],
+        "20s": [
+          P("Yann Sommer", "GK", 88, 86, 78, 72, 84),
+          P("Alessandro Bastoni", "CB", 32, 76, 90, 86, 85),
+          P("Milan Skriniar", "CB", 26, 52, 89, 90, 83),
+          P("Federico Dimarco", "LB", 48, 80, 82, 84, 82),
+          P("Denzel Dumfries", "RB", 40, 60, 80, 90, 79),
+          P("Nicolo Barella", "CM", 68, 86, 74, 88, 86),
+          P("Hakan Calhanoglu", "CDM", 72, 90, 62, 76, 86),
+          P("Lautaro Martinez", "ST", 92, 74, 35, 88, 90),
+          P("Romelu Lukaku", "ST", 90, 66, 25, 94, 82),
+                  P("Ivan Perisic", "LW", 82, 80, 44, 89, 84),
+                  P("Edin Dzeko", "ST", 82, 61, 29, 81, 82),
+                  P("Matteo Darmian", "RB", 34, 62, 85, 83, 78),
+        ],
+      }},
+      "Juventus": { abbr: "JUV", c1: "#000000", c2: "#FFFFFF", eras: {
+        "80s": [
+          P("Dino Zoff", "GK", 92, 95, 56, 90, 94),
+          P("Gaetano Scirea", "CB", 35, 80, 96, 82, 94),
+          P("Antonio Cabrini", "LB", 40, 70, 89, 84, 86),
+          P("Claudio Gentile", "RB", 22, 48, 93, 88, 88),
+          P("Michel Platini", "CAM", 92, 98, 42, 76, 97),
+          P("Marco Tardelli", "CM", 66, 76, 84, 88, 92),
+          P("Paolo Rossi", "ST", 93, 68, 22, 78, 95),
+          P("Zbigniew Boniek", "RW", 86, 80, 35, 88, 87),
+                  P("Stefano Tacconi", "GK", 86, 82, 58, 80, 84),
+                  P("Sergio Brio", "CB", 25, 52, 86, 87, 84),
+                  P("Massimo Bonini", "CDM", 41, 71, 83, 82, 82),
+                  P("Aldo Serena", "ST", 86, 63, 26, 81, 78),
+        ],
+        "90s": [
+          P("Angelo Peruzzi", "GK", 90, 88, 56, 82, 86),
+          P("Ciro Ferrara", "CB", 26, 58, 91, 86, 87),
+          P("Paolo Montero", "CB", 24, 50, 88, 90, 85),
+          P("Moreno Torricelli", "RB", 24, 50, 84, 84, 81),
+          P("Zinedine Zidane", "CAM", 85, 98, 45, 86, 96),
+          P("Didier Deschamps", "CDM", 40, 76, 86, 82, 92),
+          P("Edgar Davids", "CM", 58, 78, 86, 92, 88),
+          P("Alessandro Del Piero", "ST", 92, 88, 28, 78, 93),
+          P("Gianluca Vialli", "ST", 88, 76, 38, 88, 90),
+          P("Roberto Baggio", "ST", 94, 94, 25, 74, 92),
+                  P("Antonio Conte", "CM", 67, 85, 74, 85, 85),
+                  P("Filippo Inzaghi", "ST", 90, 68, 31, 88, 87),
+        ],
+        "00s": [
+          P("Gianluigi Buffon", "GK", 96, 94, 64, 88, 90),
+          P("Lilian Thuram", "CB", 28, 64, 95, 92, 91),
+          P("Fabio Cannavaro", "CB", 28, 60, 96, 88, 94),
+          P("Gianluca Zambrotta", "LB", 34, 68, 88, 84, 85),
+          P("Pavel Nedved", "LW", 84, 90, 55, 90, 93),
+          P("Mauro Camoranesi", "RW", 70, 80, 48, 80, 80),
+          P("Emerson", "CDM", 50, 78, 86, 86, 84),
+          P("David Trezeguet", "ST", 92, 60, 20, 82, 88),
+          P("Alessandro Del Piero", "ST", 90, 86, 28, 74, 92),
+                  P("Gianluca Pessotto", "LB", 33, 62, 82, 83, 78),
+                  P("Alessio Tacchinardi", "CDM", 41, 72, 85, 83, 82),
+                  P("Zlatan Ibrahimovic", "ST", 89, 67, 34, 87, 87),
+        ],
+        "10s": [
+          P("Gianluigi Buffon", "GK", 93, 92, 68, 86, 90),
+          P("Giorgio Chiellini", "CB", 30, 56, 96, 92, 95),
+          P("Leonardo Bonucci", "CB", 38, 80, 92, 86, 90),
+          P("Stephan Lichtsteiner", "RB", 32, 62, 85, 86, 83),
+          P("Alex Sandro", "LB", 34, 68, 85, 88, 81),
+          P("Andrea Pirlo", "CDM", 66, 97, 48, 64, 94),
+          P("Claudio Marchisio", "CM", 64, 80, 72, 82, 84),
+          P("Paul Pogba", "CM", 76, 88, 68, 92, 86),
+          P("Gonzalo Higuain", "ST", 92, 72, 24, 82, 84),
+          P("Paulo Dybala", "ST/RW", 88, 88, 28, 74, 86),
+          P("Cristiano Ronaldo", "ST", 95, 82, 30, 90, 95),
+                  P("Carlos Tevez", "ST", 89, 68, 34, 86, 86),
+        ],
+        "20s": [
+          P("Wojciech Szczesny", "GK", 87, 84, 74, 78, 82),
+          P("Gleison Bremer", "CB", 28, 52, 90, 92, 83),
+          P("Danilo", "RB", 35, 70, 86, 86, 85),
+          P("Andrea Cambiaso", "LB", 34, 70, 80, 82, 78),
+          P("Manuel Locatelli", "CDM", 54, 80, 76, 80, 78),
+          P("Adrien Rabiot", "CM", 60, 74, 74, 86, 79),
+          P("Dusan Vlahovic", "ST", 88, 60, 24, 88, 80),
+          P("Federico Chiesa", "RW", 85, 78, 32, 88, 87),
+          P("Cristiano Ronaldo", "ST", 93, 80, 30, 87, 93),
+                  P("Juan Cuadrado", "RW", 77, 74, 41, 82, 79),
+                  P("Weston McKennie", "CM", 59, 80, 70, 82, 78),
+                  P("Paul Pogba", "CM", 58, 76, 69, 81, 78),
+                  P("Leonardo Bonucci", "CB", 31, 56, 92, 93, 87),
+        ],
+      }},
+      "Ajax": { abbr: "AJX", c1: "#D2122E", c2: "#FFFFFF", eras: {
+        "70s": [
+          P("Heinz Stuy", "GK", 80, 82, 54, 76, 84),
+          P("Ruud Krol", "LB", 45, 82, 92, 88, 90),
+          P("Wim Suurbier", "RB", 32, 62, 86, 86, 82),
+          P("Barry Hulshoff", "CB", 30, 58, 86, 86, 81),
+          P("Johan Neeskens", "CM", 74, 86, 78, 90, 90),
+          P("Arie Haan", "CDM", 64, 84, 70, 80, 84),
+          P("Gerrie Muhren", "CM", 60, 84, 55, 72, 80),
+          P("Johan Cruyff", "ST/CAM", 97, 99, 45, 88, 97),
+          P("Piet Keizer", "LW", 82, 88, 30, 76, 84),
+          P("Johnny Rep", "RW", 84, 74, 28, 84, 82),
+                  P("Ruud Geels", "ST", 86, 63, 27, 84, 79),
+                  P("Sjaak Swart", "RW", 83, 81, 43, 90, 82),
+        ],
+        "90s": [
+          P("Edwin van der Sar", "GK", 89, 86, 88, 82, 86),
+          P("Frank de Boer", "CB", 40, 84, 89, 78, 87),
+          P("Danny Blind", "CB", 35, 78, 88, 76, 89),
+          P("Michael Reiziger", "RB", 28, 62, 84, 86, 80),
+          P("Jari Litmanen", "CAM", 86, 92, 45, 76, 90),
+          P("Edgar Davids", "CM", 56, 76, 84, 92, 86),
+          P("Frank Rijkaard", "CDM", 58, 84, 90, 88, 92),
+          P("Patrick Kluivert", "ST", 90, 78, 28, 88, 89),
+          P("Marc Overmars", "LW", 84, 78, 32, 90, 84),
+          P("Finidi George", "RW", 78, 74, 30, 84, 78),
+                  P("Ronald de Boer", "RM", 75, 83, 48, 85, 84),
+                  P("Nwankwo Kanu", "ST", 88, 80, 32, 90, 87),
+        ],
+        "10s": [
+          P("Andre Onana", "GK", 85, 76, 88, 78, 80),
+          P("Matthijs de Ligt", "CB", 35, 64, 89, 90, 86),
+          P("Daley Blind", "CB", 35, 82, 85, 74, 84),
+          P("Nicolas Tagliafico", "LB", 35, 66, 84, 84, 81),
+          P("Noussair Mazraoui", "RB", 32, 64, 81, 84, 77),
+          P("Frenkie de Jong", "CDM", 56, 92, 72, 84, 85),
+          P("Hakim Ziyech", "RW", 78, 90, 35, 74, 82),
+          P("Donny van de Beek", "CM", 72, 80, 52, 78, 80),
+          P("Dusan Tadic", "ST", 82, 88, 35, 76, 86),
+          P("David Neres", "LW", 78, 74, 28, 84, 76),
+                  P("Lasse Schone", "CM", 60, 77, 72, 79, 81),
+                  P("Klaas-Jan Huntelaar", "ST", 85, 61, 27, 83, 78),
+        ],
+      }},
+      "Benfica": { abbr: "BEN", c1: "#E83030", c2: "#FFFFFF", eras: {
+        "60s": [
+          P("Costa Pereira", "GK", 85, 83, 52, 80, 88),
+          P("Germano", "CB", 25, 52, 89, 84, 85),
+          P("Fernando Cruz", "CB/CDM", 24, 50, 84, 82, 80),
+          P("Mario Coluna", "CM", 74, 92, 65, 84, 92),
+          P("Jose Augusto", "RW", 76, 82, 35, 78, 84),
+          P("Eusebio", "ST", 98, 80, 30, 94, 96),
+          P("Jose Torres", "ST", 84, 62, 30, 90, 82),
+          P("Antonio Simoes", "LW", 78, 80, 32, 80, 82),
+                  P("Jose Aguas", "ST", 88, 66, 30, 86, 83),
+                  P("Domiciano Cavem", "CM", 62, 78, 68, 81, 81),
+                  P("Angelo Martins", "LB", 34, 63, 83, 82, 80),
+                  P("Mario Joao", "RB", 30, 62, 84, 84, 78),
+        ],
+        "20s": [
+          P("Odysseas Vlachodimos", "GK", 84, 80, 76, 74, 74),
+          P("Nicolas Otamendi", "CB", 30, 56, 88, 88, 87),
+          P("Alejandro Grimaldo", "LB", 50, 84, 81, 82, 81),
+          P("Antonio Silva", "CB", 26, 56, 85, 86, 79),
+          P("Enzo Fernandez", "CM", 60, 88, 74, 80, 85),
+          P("Joao Mario", "CAM", 66, 80, 56, 76, 78),
+          P("Darwin Nunez", "ST", 86, 62, 25, 93, 80),
+          P("Goncalo Ramos", "ST", 84, 64, 26, 84, 80),
+          P("Rafa Silva", "RW", 82, 78, 30, 88, 81),
+                  P("Joao Neves", "CM", 67, 83, 76, 84, 86),
+                  P("Anatoliy Trubin", "GK", 86, 80, 78, 80, 76),
+                  P("Angel Di Maria", "RW", 80, 77, 43, 87, 85),
+        ],
+      }},
+      "Porto": { abbr: "POR", c1: "#00428C", c2: "#FFFFFF", eras: {
+        "80s": [
+          P("Jozef Mlynarczyk", "GK", 84, 81, 55, 80, 86),
+          P("Joao Pinto", "RB", 30, 62, 86, 82, 84),
+          P("Lima Pereira", "CB", 24, 48, 83, 84, 80),
+          P("Antonio Andre", "CM", 56, 74, 62, 76, 78),
+          P("Jaime Magalhaes", "CM", 54, 70, 64, 78, 76),
+          P("Rabah Madjer", "ST", 86, 82, 26, 76, 92),
+          P("Paulo Futre", "LW", 90, 86, 28, 86, 88),
+          P("Fernando Gomes", "ST", 90, 62, 22, 76, 86),
+                  P("Juary", "ST", 85, 63, 29, 84, 81),
+                  P("Antonio Sousa", "CM", 61, 78, 68, 81, 79),
+                  P("Augusto Inacio", "LB", 32, 62, 84, 83, 79),
+                  P("Celso", "RB", 30, 60, 85, 84, 78),
+        ],
+        "00s": [
+          P("Vitor Baia", "GK", 88, 84, 62, 80, 88),
+          P("Ricardo Carvalho", "CB", 26, 66, 93, 84, 88),
+          P("Paulo Ferreira", "RB", 28, 62, 86, 82, 82),
+          P("Pepe", "CB", 26, 50, 89, 90, 83),
+          P("Deco", "CAM", 74, 93, 55, 78, 92),
+          P("Maniche", "CM", 68, 80, 66, 82, 85),
+          P("Costinha", "CDM", 38, 62, 86, 84, 86),
+          P("Derlei", "ST", 84, 68, 28, 80, 86),
+          P("Benni McCarthy", "ST", 84, 62, 24, 80, 83),
+                  P("Lucho Gonzalez", "CM", 64, 83, 77, 87, 84),
+                  P("Ricardo Quaresma", "RW", 83, 81, 47, 88, 82),
+                  P("Lisandro Lopez", "ST", 91, 65, 33, 89, 83),
+        ],
+        "10s": [
+          P("Iker Casillas", "GK", 85, 82, 64, 72, 84),
+          P("Nicolas Otamendi", "CB", 32, 56, 88, 90, 84),
+          P("Danilo", "RB", 38, 70, 84, 86, 81),
+          P("Alex Sandro", "LB", 32, 64, 83, 86, 79),
+          P("James Rodriguez", "RW", 82, 92, 38, 76, 86),
+          P("Joao Moutinho", "CM", 62, 88, 60, 74, 84),
+          P("Hulk", "RW", 92, 76, 30, 96, 87),
+          P("Radamel Falcao", "ST", 94, 66, 24, 86, 91),
+          P("Jackson Martinez", "ST", 86, 62, 24, 88, 80),
+                  P("Yacine Brahimi", "LW", 83, 77, 47, 88, 84),
+                  P("Hector Herrera", "CM", 61, 77, 69, 81, 79),
+                  P("Vincent Aboubakar", "ST", 86, 63, 28, 81, 82),
+        ],
+      }},
+      "Paris Saint-Germain": { abbr: "PSG", c1: "#004170", c2: "#DA291C", eras: {
+        "90s": [
+          P("Bernard Lama", "GK", 88, 83, 62, 80, 84),
+          P("Ricardo Gomes", "CB", 30, 62, 89, 84, 86),
+          P("Alain Roche", "CB", 26, 56, 85, 82, 81),
+          P("Rai", "CAM", 82, 90, 45, 80, 89),
+          P("Valdo", "CM", 68, 86, 42, 76, 80),
+          P("George Weah", "ST", 92, 78, 30, 94, 89),
+          P("David Ginola", "LW", 85, 88, 28, 80, 83),
+                  P("Vincent Guerin", "CM", 60, 77, 70, 81, 80),
+                  P("Paul Le Guen", "CDM", 42, 72, 84, 82, 81),
+                  P("Youri Djorkaeff", "CAM", 78, 91, 48, 76, 84),
+                  P("Patrice Loko", "ST", 86, 63, 28, 84, 78),
+                  P("Leonardo", "CAM", 79, 93, 50, 79, 85),
+        ],
+        "10s": [
+          P("Salvatore Sirigu", "GK", 84, 82, 62, 76, 74),
+          P("Thiago Silva", "CB", 32, 76, 96, 86, 92),
+          P("Marquinhos", "CB", 30, 70, 91, 86, 86),
+          P("Maxwell", "LB", 38, 76, 83, 80, 82),
+          P("Marco Verratti", "CM", 50, 93, 70, 74, 84),
+          P("Blaise Matuidi", "CM", 56, 72, 80, 90, 84),
+          P("Zlatan Ibrahimovic", "ST", 96, 86, 32, 92, 92),
+          P("Edinson Cavani", "ST", 93, 68, 35, 90, 89),
+          P("Neymar", "LW", 95, 93, 28, 86, 90),
+          P("Angel Di Maria", "RW", 86, 92, 35, 82, 88),
+                  P("Javier Pastore", "CAM", 80, 91, 51, 79, 86),
+                  P("Lucas Moura", "RW", 77, 75, 41, 84, 80),
+        ],
+        "20s": [
+          P("Gianluigi Donnarumma", "GK", 93, 84, 70, 80, 92),
+          P("Achraf Hakimi", "RB", 52, 76, 84, 95, 84),
+          P("Marquinhos", "CB", 32, 72, 91, 86, 87),
+          P("Nuno Mendes", "LB", 40, 70, 84, 92, 81),
+          P("Vitinha", "CM", 62, 90, 64, 76, 84),
+          P("Fabian Ruiz", "CM", 62, 84, 66, 80, 81),
+          P("Kylian Mbappe", "LW/ST", 99, 86, 28, 97, 94),
+          P("Lionel Messi", "RW/CAM", 92, 96, 28, 76, 92),
+          P("Ousmane Dembele", "RW", 86, 86, 30, 90, 84),
+                  P("Neymar", "LW", 79, 79, 44, 88, 81),
+                  P("Sergio Ramos", "CB", 32, 58, 89, 92, 85),
+                  P("Presnel Kimpembe", "CB", 28, 54, 88, 87, 82),
+        ],
+      }},
+      "Borussia Dortmund": { abbr: "BVB", c1: "#FDE100", c2: "#000000", eras: {
+        "90s": [
+          P("Stefan Klos", "GK", 86, 84, 58, 78, 86),
+          P("Matthias Sammer", "CB", 60, 88, 93, 86, 95),
+          P("Jurgen Kohler", "CB", 24, 52, 93, 88, 90),
+          P("Stefan Reuter", "RB", 30, 58, 85, 88, 84),
+          P("Andreas Moller", "CAM", 80, 88, 42, 80, 86),
+          P("Michael Zorc", "CM", 64, 78, 62, 76, 84),
+          P("Karl-Heinz Riedle", "ST", 86, 64, 28, 84, 90),
+          P("Stephane Chapuisat", "ST", 85, 70, 25, 80, 83),
+                  P("Lars Ricken", "CAM", 72, 87, 47, 71, 80),
+                  P("Paulo Sousa", "CM", 66, 83, 77, 87, 84),
+                  P("Heiko Herrlich", "ST", 82, 64, 27, 81, 81),
+                  P("Knut Reinhardt", "LB", 33, 63, 81, 83, 78),
+        ],
+        "10s": [
+          P("Roman Weidenfeller", "GK", 84, 83, 60, 80, 82),
+          P("Mats Hummels", "CB", 36, 82, 92, 84, 89),
+          P("Lukasz Piszczek", "RB", 38, 70, 85, 86, 82),
+          P("Marcel Schmelzer", "LB", 28, 60, 82, 82, 79),
+          P("Ilkay Gundogan", "CM", 68, 88, 62, 76, 85),
+          P("Shinji Kagawa", "CAM", 76, 86, 42, 74, 82),
+          P("Robert Lewandowski", "ST", 94, 74, 28, 88, 90),
+          P("Marco Reus", "LW", 88, 84, 32, 86, 86),
+          P("Pierre-Emerick Aubameyang", "ST", 91, 64, 26, 95, 84),
+                  P("Mario Gotze", "CAM", 80, 92, 48, 78, 83),
+                  P("Sokratis Papastathopoulos", "CB", 26, 53, 84, 85, 82),
+                  P("Henrikh Mkhitaryan", "CAM", 78, 89, 48, 77, 85),
+        ],
+        "20s": [
+          P("Gregor Kobel", "GK", 89, 85, 80, 80, 78),
+          P("Nico Schlotterbeck", "CB", 30, 68, 86, 88, 80),
+          P("Mats Hummels", "CB", 32, 76, 88, 78, 88),
+          P("Julian Ryerson", "RB", 30, 56, 79, 84, 76),
+          P("Jude Bellingham", "CM", 78, 86, 70, 88, 90),
+          P("Julian Brandt", "CAM", 70, 86, 45, 76, 79),
+          P("Erling Haaland", "ST", 98, 62, 24, 97, 92),
+          P("Karim Adeyemi", "LW", 78, 64, 26, 92, 75),
+                  P("Marco Reus", "CAM", 80, 91, 50, 77, 86),
+                  P("Niklas Sule", "CB", 25, 51, 84, 89, 84),
+                  P("Donyell Malen", "RW", 76, 73, 41, 84, 78),
+                  P("Emre Can", "CDM", 44, 68, 85, 86, 84),
+        ],
+      }},
+      "Celtic": { abbr: "CEL", c1: "#018749", c2: "#FFFFFF", eras: {
+        "60s": [
+          P("Ronnie Simpson", "GK", 85, 86, 50, 80, 90),
+          P("Billy McNeill", "CB", 35, 56, 91, 86, 94),
+          P("Tommy Gemmell", "LB", 55, 70, 84, 86, 90),
+          P("Jim Craig", "RB", 26, 56, 82, 80, 82),
+          P("Bobby Murdoch", "CM", 68, 86, 64, 80, 88),
+          P("Bertie Auld", "CM", 66, 84, 55, 76, 86),
+          P("Jimmy Johnstone", "RW", 84, 90, 28, 82, 90),
+          P("Bobby Lennox", "LW", 86, 72, 28, 88, 86),
+          P("Stevie Chalmers", "ST", 82, 62, 28, 84, 88),
+                  P("John Clark", "CB", 27, 52, 84, 88, 83),
+                  P("Willie Wallace", "ST", 83, 61, 26, 84, 82),
+                  P("Charlie Gallagher", "CAM", 76, 85, 45, 72, 79),
+        ],
+        "00s": [
+          P("Artur Boruc", "GK", 86, 80, 60, 78, 82),
+          P("Bobo Balde", "CB", 28, 44, 85, 92, 81),
+          P("Johan Mjallby", "CB", 30, 50, 84, 88, 82),
+          P("Stiliyan Petrov", "CM", 64, 78, 64, 80, 82),
+          P("Neil Lennon", "CDM", 40, 72, 80, 78, 84),
+          P("Lubomir Moravcik", "CAM", 78, 90, 38, 68, 85),
+          P("Henrik Larsson", "ST", 95, 80, 30, 86, 95),
+          P("Chris Sutton", "ST", 82, 68, 45, 88, 84),
+          P("John Hartson", "ST", 82, 60, 32, 88, 82),
+                  P("Shunsuke Nakamura", "CAM", 81, 89, 48, 77, 86),
+                  P("Paul Lambert", "CDM", 40, 68, 85, 83, 81),
+                  P("Didier Agathe", "RB", 33, 60, 84, 82, 77),
+        ],
+      }},
+      "Manchester United": { abbr: "MUN", c1: "#DA291C", c2: "#FBE122", eras: {
+        "60s": [
+          P("Alex Stepney", "GK", 85, 85, 54, 80, 90),
+          P("Bill Foulkes", "CB", 24, 46, 87, 86, 86),
+          P("Tony Dunne", "LB", 26, 54, 85, 84, 82),
+          P("Shay Brennan", "RB", 24, 52, 82, 80, 80),
+          P("Nobby Stiles", "CDM", 38, 62, 88, 84, 89),
+          P("Paddy Crerand", "CM", 54, 84, 66, 76, 84),
+          P("George Best", "RW/LW", 95, 90, 35, 86, 92),
+          P("Bobby Charlton", "CAM", 92, 94, 45, 82, 96),
+          P("Denis Law", "ST", 94, 74, 30, 84, 92),
+                  P("David Herd", "ST", 86, 61, 25, 83, 78),
+                  P("John Connelly", "RW", 78, 74, 38, 84, 80),
+                  P("Brian Kidd", "ST", 83, 64, 28, 85, 79),
+        ],
+      }},
+      "Liverpool": { abbr: "LIV", c1: "#C8102E", c2: "#F6EB61", eras: {
+        "70s": [
+          P("Ray Clemence", "GK", 92, 92, 58, 86, 92),
+          P("Emlyn Hughes", "CB", 40, 68, 89, 88, 92),
+          P("Phil Neal", "RB", 38, 66, 87, 82, 88),
+          P("Tommy Smith", "CB", 28, 50, 88, 88, 88),
+          P("Ian Callaghan", "RM", 62, 80, 64, 82, 86),
+          P("Terry McDermott", "CM", 72, 80, 58, 84, 85),
+          P("Steve Heighway", "LW", 74, 82, 35, 86, 82),
+          P("Kevin Keegan", "ST", 92, 84, 38, 90, 94),
+          P("John Toshack", "ST", 84, 66, 30, 88, 84),
+                  P("Kenny Dalglish", "ST", 90, 90, 32, 89, 84),
+                  P("Jimmy Case", "RM", 71, 80, 46, 80, 79),
+                  P("Ray Kennedy", "LM", 75, 81, 49, 86, 81),
+        ],
+        "80s": [
+          P("Bruce Grobbelaar", "GK", 86, 76, 64, 86, 88),
+          P("Alan Hansen", "CB", 36, 84, 93, 84, 90),
+          P("Mark Lawrenson", "CB", 32, 70, 91, 86, 86),
+          P("Phil Neal", "RB", 36, 64, 86, 80, 87),
+          P("Graeme Souness", "CM", 72, 86, 84, 90, 95),
+          P("Ronnie Whelan", "LM", 62, 78, 70, 80, 84),
+          P("John Barnes", "LW", 86, 90, 40, 86, 88),
+          P("Kenny Dalglish", "ST", 93, 95, 35, 78, 96),
+          P("Ian Rush", "ST", 96, 68, 35, 86, 94),
+                  P("Steve Nicol", "RB", 36, 67, 87, 88, 83),
+                  P("Peter Beardsley", "ST", 91, 68, 31, 86, 83),
+                  P("Craig Johnston", "RM", 70, 77, 43, 82, 78),
+        ],
+      }},
+      "Nottingham Forest": { abbr: "NFO", c1: "#DD0000", c2: "#FFFFFF", eras: {
+        "70s": [
+          P("Peter Shilton", "GK", 94, 93, 56, 90, 93),
+          P("Viv Anderson", "RB", 36, 64, 87, 88, 84),
+          P("Kenny Burns", "CB", 30, 54, 88, 88, 87),
+          P("Larry Lloyd", "CB", 26, 46, 86, 88, 84),
+          P("Frank Clark", "LB", 22, 50, 82, 80, 82),
+          P("John McGovern", "CM", 48, 74, 72, 78, 86),
+          P("John Robertson", "LW", 74, 90, 40, 70, 90),
+          P("Martin O'Neill", "RM", 62, 74, 58, 80, 82),
+          P("Trevor Francis", "ST", 88, 76, 28, 86, 90),
+          P("Garry Birtles", "ST", 80, 64, 30, 84, 82),
+                  P("Tony Woodcock", "ST", 91, 68, 32, 89, 86),
+                  P("Ian Bowyer", "CM", 60, 78, 69, 82, 79),
+        ],
+      }},
+      "Aston Villa": { abbr: "AVL", c1: "#670E36", c2: "#95BFE5", eras: {
+        "80s": [
+          P("Nigel Spink", "GK", 82, 79, 54, 76, 88),
+          P("Allan Evans", "CB", 30, 48, 85, 86, 84),
+          P("Ken McNaught", "CB", 26, 46, 84, 86, 82),
+          P("Kenny Swain", "RB", 24, 50, 81, 80, 80),
+          P("Dennis Mortimer", "CM", 58, 76, 70, 82, 88),
+          P("Gordon Cowans", "CM", 64, 88, 55, 72, 85),
+          P("Des Bremner", "RM", 46, 64, 70, 82, 78),
+          P("Peter Withe", "ST", 84, 60, 32, 88, 88),
+          P("Tony Morley", "LW", 78, 76, 28, 86, 84),
+                  P("Jimmy Rimmer", "GK", 82, 81, 55, 76, 72),
+                  P("Gary Shaw", "ST", 82, 63, 28, 84, 79),
+                  P("Colin Gibson", "LB", 34, 64, 85, 84, 78),
+        ],
+      }},
+    }
+  },
+  wc: {
+    label: "World Cup",
+    target: 7,
+    targetLabel: "7-0",
+    eras: ["60s", "70s", "80s", "90s", "00s", "10s", "20s"],
+    stages: ["Group · MD1", "Group · MD2", "Group · MD3", "Round of 16", "Quarter-final", "Semi-final", "FINAL"],
+    clubs: {
+      "Brazil": { abbr: "BRA", c1: "#FFDC02", c2: "#009C3B", eras: {
+        "60s": [
+          P("Gilmar", "GK", 88, 90, 62, 85, 90),
+          P("Djalma Santos", "RB", 35, 64, 90, 86, 89),
+          P("Nilton Santos", "LB", 40, 72, 90, 86, 90),
+          P("Mauro Ramos", "CB", 26, 56, 88, 84, 86),
+          P("Bellini", "CB", 24, 50, 86, 84, 85),
+          P("Didi", "CM", 70, 95, 55, 74, 92),
+          P("Gerson", "CM", 68, 94, 58, 74, 89),
+          P("Garrincha", "RW", 92, 92, 25, 86, 95),
+          P("Mario Zagallo", "LW", 76, 80, 50, 80, 86),
+          P("Pele", "ST/CAM", 99, 96, 40, 92, 99),
+          P("Vava", "ST", 90, 62, 28, 84, 92),
+                  P("Zito", "CDM", 49, 77, 88, 90, 87),
+        ],
+        "70s": [
+          P("Felix", "GK", 68, 58, 55, 60, 70),
+          P("Carlos Alberto", "RB", 50, 76, 89, 86, 93),
+          P("Everaldo", "LB", 26, 54, 82, 80, 81),
+          P("Brito", "CB", 28, 50, 85, 86, 83),
+          P("Wilson Piazza", "CB", 26, 58, 84, 82, 82),
+          P("Clodoaldo", "CDM", 45, 78, 84, 84, 85),
+          P("Gerson", "CM", 70, 95, 58, 74, 91),
+          P("Jairzinho", "RW", 94, 80, 30, 92, 96),
+          P("Rivellino", "CAM/LW", 90, 94, 40, 80, 92),
+          P("Tostao", "ST", 90, 88, 32, 76, 90),
+          P("Pele", "ST/CAM", 98, 96, 40, 90, 99),
+                  P("Paulo Cesar", "LW", 77, 75, 40, 84, 76),
+        ],
+        "80s": [
+          P("Waldir Peres", "GK", 70, 60, 58, 62, 55),
+          P("Leandro", "RB", 45, 78, 84, 84, 84),
+          P("Junior", "LB", 50, 82, 83, 82, 86),
+          P("Oscar", "CB", 26, 56, 87, 84, 84),
+          P("Edinho", "CB", 26, 52, 84, 84, 81),
+          P("Falcao", "CM", 74, 92, 70, 80, 90),
+          P("Toninho Cerezo", "CDM", 55, 84, 78, 84, 83),
+          P("Socrates", "CAM", 84, 95, 45, 78, 92),
+          P("Zico", "CAM", 94, 96, 35, 78, 94),
+          P("Eder", "LW", 86, 80, 28, 84, 84),
+          P("Careca", "ST", 90, 72, 26, 84, 87),
+                  P("Batista", "CDM", 43, 71, 85, 83, 82),
+        ],
+        "90s": [
+          P("Claudio Taffarel", "GK", 86, 82, 68, 74, 92),
+          P("Cafu", "RB", 45, 76, 87, 92, 90),
+          P("Roberto Carlos", "LB", 58, 80, 84, 96, 90),
+          P("Aldair", "CB", 26, 60, 91, 86, 88),
+          P("Marcio Santos", "CB", 28, 52, 86, 86, 83),
+          P("Dunga", "CDM", 40, 78, 88, 84, 92),
+          P("Mauro Silva", "CDM", 30, 70, 87, 84, 84),
+          P("Rivaldo", "LW/CAM", 93, 90, 28, 82, 91),
+          P("Bebeto", "ST", 91, 78, 25, 78, 90),
+          P("Romario", "ST", 97, 80, 20, 80, 94),
+          P("Ronaldo Nazario", "ST", 97, 84, 22, 95, 92),
+                  P("Jorginho", "RB", 39, 67, 90, 88, 85),
+        ],
+        "00s": [
+          P("Dida", "GK", 88, 78, 70, 80, 84),
+          P("Cafu", "RB", 44, 76, 86, 90, 91),
+          P("Roberto Carlos", "LB", 56, 80, 84, 93, 89),
+          P("Lucio", "CB", 42, 60, 92, 94, 88),
+          P("Juan", "CB", 26, 60, 88, 84, 84),
+          P("Gilberto Silva", "CDM", 38, 70, 88, 86, 86),
+          P("Kaka", "CAM", 91, 92, 38, 90, 92),
+          P("Ronaldinho", "CAM/LW", 94, 97, 30, 86, 93),
+          P("Rivaldo", "LW/CAM", 92, 90, 28, 80, 92),
+          P("Ronaldo Nazario", "ST", 96, 84, 22, 88, 96),
+          P("Adriano", "ST", 91, 70, 25, 94, 83),
+                  P("Robinho", "LW", 81, 80, 46, 90, 81),
+        ],
+      }},
+      "Germany": { abbr: "GER", c1: "#FFFFFF", c2: "#000000", eras: {
+        "70s": [
+          P("Sepp Maier", "GK", 94, 92, 65, 88, 94),
+          P("Berti Vogts", "RB", 28, 58, 90, 86, 89),
+          P("Paul Breitner", "LB", 56, 84, 84, 86, 91),
+          P("Franz Beckenbauer", "CB", 55, 92, 98, 88, 99),
+          P("Hans-Georg Schwarzenbeck", "CB", 24, 48, 88, 86, 86),
+          P("Wolfgang Overath", "CM", 70, 92, 55, 76, 89),
+          P("Rainer Bonhof", "CM", 62, 78, 76, 86, 85),
+          P("Jurgen Grabowski", "RW", 76, 78, 38, 82, 84),
+          P("Bernd Holzenbein", "LW", 76, 72, 35, 82, 83),
+          P("Gerd Muller", "ST", 99, 60, 25, 84, 99),
+                  P("Uli Hoeness", "RW", 79, 80, 47, 89, 82),
+                  P("Bernhard Cullmann", "CM", 59, 79, 70, 80, 78),
+        ],
+        "80s": [
+          P("Harald Schumacher", "GK", 90, 84, 70, 88, 86),
+          P("Thomas Berthold", "RB", 28, 54, 85, 86, 82),
+          P("Andreas Brehme", "LB", 50, 80, 87, 84, 92),
+          P("Karlheinz Forster", "CB", 24, 50, 89, 86, 86),
+          P("Klaus Augenthaler", "CB", 38, 64, 90, 86, 88),
+          P("Lothar Matthaus", "CM", 80, 88, 80, 92, 96),
+          P("Felix Magath", "CM", 66, 86, 58, 76, 85),
+          P("Pierre Littbarski", "RW", 80, 82, 32, 82, 84),
+          P("Klaus Allofs", "LW/ST", 84, 74, 30, 80, 84),
+          P("Karl-Heinz Rummenigge", "ST", 95, 84, 30, 88, 94),
+          P("Rudi Voller", "ST", 90, 72, 28, 84, 90),
+                  P("Hans-Peter Briegel", "LB", 40, 68, 86, 90, 84),
+        ],
+        "90s": [
+          P("Andreas Kopke", "GK", 84, 82, 66, 78, 84),
+          P("Stefan Reuter", "RB", 30, 58, 85, 88, 84),
+          P("Christian Ziege", "LB/LM", 50, 74, 80, 84, 82),
+          P("Matthias Sammer", "CB", 60, 88, 93, 86, 95),
+          P("Jurgen Kohler", "CB", 24, 52, 93, 88, 91),
+          P("Lothar Matthaus", "CM", 70, 86, 84, 86, 94),
+          P("Andreas Moller", "CAM", 80, 88, 42, 80, 86),
+          P("Thomas Hassler", "RM", 74, 90, 40, 72, 85),
+          P("Jurgen Klinsmann", "ST", 92, 74, 30, 86, 93),
+          P("Oliver Bierhoff", "ST", 88, 62, 28, 86, 90),
+                  P("Mehmet Scholl", "CAM", 73, 87, 45, 72, 81),
+                  P("Markus Babbel", "CB", 29, 52, 88, 87, 83),
+        ],
+        "10s": [
+          P("Manuel Neuer", "GK", 92, 90, 92, 94, 95),
+          P("Philipp Lahm", "RB", 40, 88, 92, 82, 95),
+          P("Jonas Hector", "LB", 32, 64, 82, 82, 80),
+          P("Mats Hummels", "CB", 36, 82, 92, 84, 90),
+          P("Jerome Boateng", "CB", 28, 74, 91, 90, 88),
+          P("Bastian Schweinsteiger", "CDM", 64, 84, 82, 84, 94),
+          P("Sami Khedira", "CM", 58, 74, 80, 88, 85),
+          P("Mesut Ozil", "CAM", 72, 96, 35, 66, 84),
+          P("Thomas Muller", "RW/CAM", 89, 88, 40, 80, 94),
+          P("Marco Reus", "LW", 87, 84, 32, 86, 84),
+          P("Miroslav Klose", "ST", 92, 68, 30, 82, 96),
+                  P("Andre Schurrle", "LW", 75, 72, 39, 85, 76),
+        ],
+      }},
+      "Argentina": { abbr: "ARG", c1: "#75AADB", c2: "#FFFFFF", eras: {
+        "80s": [
+          P("Nery Pumpido", "GK", 78, 74, 60, 74, 80),
+          P("Nestor Clausen", "RB", 26, 52, 82, 84, 80),
+          P("Julio Olarticoechea", "LB", 28, 56, 82, 84, 82),
+          P("Oscar Ruggeri", "CB", 30, 52, 91, 88, 90),
+          P("Jose Luis Brown", "CB", 24, 48, 86, 84, 88),
+          P("Sergio Batista", "CDM", 38, 70, 84, 84, 84),
+          P("Ricardo Giusti", "CM", 44, 66, 78, 82, 81),
+          P("Jorge Burruchaga", "CAM", 80, 86, 45, 80, 90),
+          P("Diego Maradona", "CAM", 98, 99, 40, 90, 99),
+          P("Jorge Valdano", "ST/LW", 87, 78, 32, 86, 89),
+                  P("Daniel Passarella", "CB", 32, 58, 91, 93, 88),
+                  P("Hector Enrique", "CM", 61, 79, 71, 81, 78),
+        ],
+        "00s": [
+          P("Roberto Abbondanzieri", "GK", 80, 78, 68, 74, 70),
+          P("Javier Zanetti", "RB/CM", 45, 78, 89, 92, 92),
+          P("Juan Pablo Sorin", "LB", 44, 70, 81, 84, 84),
+          P("Roberto Ayala", "CB", 28, 56, 92, 86, 89),
+          P("Walter Samuel", "CB", 26, 50, 91, 90, 87),
+          P("Javier Mascherano", "CDM", 34, 70, 91, 86, 88),
+          P("Juan Roman Riquelme", "CAM", 82, 97, 35, 70, 90),
+          P("Lionel Messi", "RW", 92, 88, 30, 88, 86),
+          P("Hernan Crespo", "ST", 91, 68, 25, 82, 88),
+          P("Carlos Tevez", "ST", 89, 80, 45, 90, 89),
+                  P("Pablo Aimar", "CAM", 81, 91, 52, 79, 84),
+                  P("Gabriel Heinze", "LB", 39, 67, 90, 87, 84),
+        ],
+        "10s": [
+          P("Sergio Romero", "GK", 78, 74, 62, 72, 85),
+          P("Pablo Zabaleta", "RB", 34, 66, 87, 88, 88),
+          P("Marcos Rojo", "LB", 30, 54, 82, 86, 80),
+          P("Nicolas Otamendi", "CB", 32, 56, 88, 90, 85),
+          P("Ezequiel Garay", "CB", 26, 54, 87, 86, 83),
+          P("Javier Mascherano", "CDM", 33, 70, 92, 86, 92),
+          P("Lucas Biglia", "CM", 48, 76, 76, 78, 79),
+          P("Lionel Messi", "RW/CAM", 98, 98, 30, 88, 95),
+          P("Angel Di Maria", "RW/LW", 87, 90, 36, 84, 88),
+          P("Sergio Aguero", "ST", 95, 78, 28, 86, 90),
+          P("Gonzalo Higuain", "ST", 90, 70, 24, 82, 80),
+                  P("Ever Banega", "CM", 59, 80, 72, 80, 79),
+        ],
+        "20s": [
+          P("Emiliano Martinez", "GK", 90, 82, 78, 84, 96),
+          P("Nahuel Molina", "RB", 36, 64, 81, 86, 82),
+          P("Marcos Acuna", "LB", 38, 68, 82, 88, 83),
+          P("Nicolas Otamendi", "CB", 30, 56, 89, 86, 89),
+          P("Cristian Romero", "CB", 32, 62, 91, 90, 88),
+          P("Rodrigo De Paul", "CM", 58, 84, 76, 88, 88),
+          P("Enzo Fernandez", "CM", 60, 88, 76, 80, 88),
+          P("Alexis Mac Allister", "CM", 66, 86, 72, 78, 88),
+          P("Lionel Messi", "RW/CAM", 96, 98, 28, 78, 99),
+          P("Angel Di Maria", "RW/LW", 84, 90, 34, 80, 92),
+          P("Julian Alvarez", "ST", 88, 76, 45, 88, 90),
+                  P("Lautaro Martinez", "ST", 89, 65, 33, 86, 83),
+        ],
+      }},
+      "England": { abbr: "ENG", c1: "#FFFFFF", c2: "#CE1124", eras: {
+        "60s": [
+          P("Gordon Banks", "GK", 96, 93, 60, 88, 96),
+          P("George Cohen", "RB", 28, 56, 87, 86, 86),
+          P("Ray Wilson", "LB", 28, 60, 87, 84, 86),
+          P("Bobby Moore", "CB", 38, 84, 97, 84, 98),
+          P("Jack Charlton", "CB", 30, 50, 89, 88, 88),
+          P("Nobby Stiles", "CDM", 36, 62, 88, 84, 90),
+          P("Alan Ball", "RM/CM", 66, 80, 62, 88, 88),
+          P("Martin Peters", "LM/CM", 72, 82, 58, 80, 87),
+          P("Bobby Charlton", "CAM", 92, 94, 45, 82, 97),
+          P("Geoff Hurst", "ST", 90, 70, 32, 86, 96),
+          P("Jimmy Greaves", "ST", 95, 72, 22, 80, 88),
+                  P("Roger Hunt", "ST", 88, 69, 34, 86, 85),
+        ],
+        "90s": [
+          P("David Seaman", "GK", 90, 90, 68, 86, 84),
+          P("Gary Neville", "RB", 30, 70, 88, 80, 88),
+          P("Stuart Pearce", "LB", 42, 60, 88, 90, 91),
+          P("Tony Adams", "CB", 34, 54, 95, 90, 95),
+          P("Gareth Southgate", "CB", 26, 60, 87, 80, 84),
+          P("Paul Ince", "CDM", 56, 72, 86, 88, 87),
+          P("David Platt", "CM", 78, 78, 58, 84, 88),
+          P("Paul Gascoigne", "CAM", 84, 94, 45, 82, 90),
+          P("Steve McManaman", "RM", 78, 86, 40, 80, 83),
+          P("Alan Shearer", "ST", 97, 72, 35, 92, 96),
+          P("Teddy Sheringham", "ST/CAM", 86, 88, 35, 72, 90),
+                  P("Sol Campbell", "CB", 32, 56, 91, 90, 88),
+        ],
+        "00s": [
+          P("David James", "GK", 84, 68, 72, 82, 66),
+          P("Gary Neville", "RB", 30, 70, 88, 80, 88),
+          P("Ashley Cole", "LB", 40, 74, 93, 90, 91),
+          P("John Terry", "CB", 40, 58, 95, 90, 93),
+          P("Rio Ferdinand", "CB", 34, 74, 95, 88, 91),
+          P("Steven Gerrard", "CM", 86, 92, 76, 90, 96),
+          P("Frank Lampard", "CM", 88, 90, 62, 84, 92),
+          P("David Beckham", "RM", 78, 96, 50, 78, 93),
+          P("Joe Cole", "LW", 76, 86, 40, 76, 84),
+          P("Michael Owen", "ST", 92, 66, 22, 88, 91),
+          P("Wayne Rooney", "ST", 92, 86, 45, 90, 92),
+                  P("Paul Scholes", "CM", 65, 81, 77, 84, 83),
+        ],
+        "20s": [
+          P("Jordan Pickford", "GK", 88, 78, 86, 74, 90),
+          P("Kyle Walker", "RB", 34, 66, 88, 95, 88),
+          P("Luke Shaw", "LB", 40, 74, 84, 84, 84),
+          P("John Stones", "CB", 38, 80, 90, 84, 88),
+          P("Harry Maguire", "CB", 30, 60, 86, 88, 84),
+          P("Declan Rice", "CDM", 58, 80, 91, 90, 89),
+          P("Jude Bellingham", "CM/CAM", 84, 88, 70, 88, 93),
+          P("Trent Alexander-Arnold", "RB/CM", 52, 94, 78, 80, 86),
+          P("Bukayo Saka", "RW", 87, 85, 45, 84, 88),
+          P("Phil Foden", "LW/CAM", 86, 88, 40, 80, 85),
+          P("Harry Kane", "ST", 96, 86, 30, 86, 91),
+                  P("Marcus Rashford", "LW", 74, 74, 38, 84, 76),
+        ],
+      }},
+      "France": { abbr: "FRA", c1: "#21304D", c2: "#EF4135", eras: {
+        "80s": [
+          P("Joel Bats", "GK", 84, 80, 64, 78, 82),
+          P("Patrick Battiston", "RB/CB", 28, 60, 88, 84, 86),
+          P("Manuel Amoros", "LB/RB", 34, 66, 87, 86, 85),
+          P("Marius Tresor", "CB", 28, 56, 90, 88, 88),
+          P("Maxime Bossis", "CB", 26, 58, 88, 84, 86),
+          P("Luis Fernandez", "CDM", 50, 72, 84, 84, 86),
+          P("Jean Tigana", "CM", 62, 88, 74, 86, 89),
+          P("Alain Giresse", "CM", 72, 92, 55, 72, 89),
+          P("Michel Platini", "CAM", 93, 98, 42, 76, 98),
+          P("Dominique Rocheteau", "ST/RW", 86, 78, 28, 84, 85),
+          P("Didier Six", "LW", 78, 72, 28, 82, 79),
+                  P("Bruno Bellone", "LW", 78, 75, 40, 84, 77),
+        ],
+        "90s": [
+          P("Fabien Barthez", "GK", 88, 74, 72, 84, 92),
+          P("Lilian Thuram", "RB", 30, 64, 95, 92, 94),
+          P("Bixente Lizarazu", "LB", 38, 74, 88, 86, 87),
+          P("Laurent Blanc", "CB", 36, 78, 93, 82, 92),
+          P("Marcel Desailly", "CB", 30, 64, 95, 94, 93),
+          P("Didier Deschamps", "CDM", 40, 76, 87, 82, 94),
+          P("Emmanuel Petit", "CM", 56, 84, 86, 86, 90),
+          P("Zinedine Zidane", "CAM", 88, 99, 45, 86, 99),
+          P("Youri Djorkaeff", "RW/CAM", 84, 86, 36, 78, 87),
+          P("Thierry Henry", "RW/ST", 84, 80, 32, 92, 86),
+          P("David Trezeguet", "ST", 88, 60, 22, 82, 88),
+                  P("Robert Pires", "LW", 81, 77, 47, 88, 85),
+        ],
+        "10s": [
+          P("Hugo Lloris", "GK", 90, 82, 70, 76, 90),
+          P("Benjamin Pavard", "RB", 32, 62, 85, 84, 87),
+          P("Lucas Hernandez", "LB", 28, 56, 87, 88, 85),
+          P("Raphael Varane", "CB", 26, 62, 93, 88, 92),
+          P("Samuel Umtiti", "CB", 26, 60, 88, 86, 87),
+          P("N'Golo Kante", "CDM", 44, 76, 96, 92, 94),
+          P("Paul Pogba", "CM", 76, 90, 68, 90, 90),
+          P("Antoine Griezmann", "CAM/ST", 89, 88, 45, 82, 93),
+          P("Kylian Mbappe", "RW/ST", 95, 82, 28, 96, 94),
+          P("Blaise Matuidi", "LM", 54, 70, 80, 88, 84),
+          P("Olivier Giroud", "ST", 82, 74, 30, 86, 87),
+                  P("Ousmane Dembele", "RW", 78, 73, 41, 82, 76),
+        ],
+        "20s": [
+          P("Mike Maignan", "GK", 90, 86, 90, 86, 86),
+          P("Jules Kounde", "RB", 28, 68, 88, 88, 84),
+          P("Theo Hernandez", "LB", 52, 74, 84, 94, 84),
+          P("William Saliba", "CB", 26, 66, 92, 92, 86),
+          P("Dayot Upamecano", "CB", 26, 58, 87, 90, 82),
+          P("Aurelien Tchouameni", "CDM", 52, 78, 87, 88, 85),
+          P("Adrien Rabiot", "CM", 60, 74, 76, 86, 82),
+          P("Antoine Griezmann", "CAM", 84, 90, 55, 80, 92),
+          P("Ousmane Dembele", "RW", 84, 86, 30, 90, 82),
+          P("Kylian Mbappe", "LW/ST", 98, 86, 28, 96, 95),
+          P("Olivier Giroud", "ST", 80, 72, 30, 82, 87),
+                  P("Randal Kolo Muani", "ST", 86, 61, 26, 83, 78),
+        ],
+      }},
+      "Italy": { abbr: "ITA", c1: "#0066BC", c2: "#FFFFFF", eras: {
+        "70s": [
+          P("Dino Zoff", "GK", 90, 94, 60, 86, 88),
+          P("Tarcisio Burgnich", "RB", 22, 50, 91, 88, 88),
+          P("Giacinto Facchetti", "LB", 50, 70, 93, 92, 94),
+          P("Roberto Rosato", "CB", 24, 50, 87, 84, 84),
+          P("Pierluigi Cera", "CB", 26, 60, 86, 80, 84),
+          P("Mario Bertini", "CM", 50, 68, 76, 82, 80),
+          P("Giancarlo De Sisti", "CM", 58, 84, 62, 74, 84),
+          P("Gianni Rivera", "CAM", 84, 96, 40, 70, 92),
+          P("Sandro Mazzola", "CAM/RM", 86, 86, 42, 82, 92),
+          P("Gigi Riva", "ST/LW", 95, 72, 28, 88, 94),
+          P("Roberto Boninsegna", "ST", 88, 64, 26, 84, 86),
+                  P("Giorgio Chinaglia", "ST", 83, 64, 26, 83, 79),
+        ],
+        "80s": [
+          P("Dino Zoff", "GK", 88, 94, 58, 86, 96),
+          P("Claudio Gentile", "RB", 22, 48, 93, 88, 90),
+          P("Antonio Cabrini", "LB", 40, 70, 89, 84, 88),
+          P("Gaetano Scirea", "CB", 35, 80, 96, 82, 95),
+          P("Fulvio Collovati", "CB", 24, 50, 87, 86, 84),
+          P("Gabriele Oriali", "CDM", 40, 64, 82, 84, 84),
+          P("Marco Tardelli", "CM", 66, 76, 84, 88, 94),
+          P("Giancarlo Antognoni", "CAM", 74, 92, 45, 74, 87),
+          P("Bruno Conti", "RW/LW", 82, 88, 35, 82, 90),
+          P("Paolo Rossi", "ST", 93, 68, 22, 78, 97),
+          P("Alessandro Altobelli", "ST", 87, 68, 25, 80, 87),
+                  P("Giuseppe Bergomi", "RB", 37, 65, 88, 91, 84),
+        ],
+        "00s": [
+          P("Gianluigi Buffon", "GK", 94, 92, 74, 88, 95),
+          P("Gianluca Zambrotta", "RB/LB", 34, 68, 88, 84, 87),
+          P("Fabio Grosso", "LB", 36, 64, 83, 82, 91),
+          P("Fabio Cannavaro", "CB", 28, 60, 97, 88, 96),
+          P("Marco Materazzi", "CB", 40, 50, 88, 92, 90),
+          P("Andrea Pirlo", "CDM", 70, 98, 50, 68, 95),
+          P("Gennaro Gattuso", "CM", 35, 64, 91, 90, 90),
+          P("Francesco Totti", "CAM", 90, 95, 35, 80, 91),
+          P("Mauro Camoranesi", "RW", 70, 80, 48, 80, 81),
+          P("Alessandro Del Piero", "ST", 88, 86, 28, 74, 92),
+          P("Luca Toni", "ST", 89, 58, 24, 88, 86),
+                  P("Daniele De Rossi", "CM", 65, 81, 77, 84, 85),
+        ],
+      }},
+      "Netherlands": { abbr: "NED", c1: "#FF7F00", c2: "#FFFFFF", eras: {
+        "70s": [
+          P("Jan Jongbloed", "GK", 70, 62, 74, 58, 66),
+          P("Wim Suurbier", "RB", 32, 62, 86, 86, 83),
+          P("Ruud Krol", "LB", 45, 82, 92, 88, 91),
+          P("Wim Rijsbergen", "CB", 24, 50, 84, 84, 81),
+          P("Arie Haan", "CDM/CB", 64, 84, 76, 80, 86),
+          P("Johan Neeskens", "CM", 76, 86, 78, 90, 92),
+          P("Wim van Hanegem", "CM", 68, 90, 62, 78, 87),
+          P("Johnny Rep", "RW", 84, 74, 28, 84, 84),
+          P("Rob Rensenbrink", "LW", 88, 84, 28, 82, 88),
+          P("Johan Cruyff", "ST/CAM", 98, 99, 45, 88, 97),
+                  P("Rene van de Kerkhof", "RW", 75, 73, 39, 85, 77),
+                  P("Willy van de Kerkhof", "LM", 72, 76, 43, 81, 78),
+        ],
+        "80s": [
+          P("Hans van Breukelen", "GK", 84, 80, 66, 80, 88),
+          P("Berry van Aerle", "RB", 26, 52, 84, 84, 81),
+          P("Adri van Tiggelen", "LB", 24, 50, 85, 84, 82),
+          P("Ronald Koeman", "CB", 70, 88, 86, 78, 92),
+          P("Frank Rijkaard", "CB/CDM", 60, 84, 92, 92, 92),
+          P("Jan Wouters", "CDM", 42, 68, 84, 84, 84),
+          P("Erwin Koeman", "LM", 58, 78, 64, 76, 81),
+          P("Gerald Vanenburg", "RM", 70, 82, 42, 78, 79),
+          P("Ruud Gullit", "CAM/ST", 92, 90, 55, 95, 95),
+          P("Marco van Basten", "ST", 99, 88, 30, 88, 97),
+                  P("John van 't Schip", "RW", 77, 76, 39, 83, 76),
+                  P("Wim Kieft", "ST", 85, 63, 26, 82, 79),
+        ],
+        "90s": [
+          P("Edwin van der Sar", "GK", 88, 88, 90, 84, 82),
+          P("Michael Reiziger", "RB", 28, 62, 85, 86, 81),
+          P("Arthur Numan", "LB", 30, 62, 83, 82, 80),
+          P("Frank de Boer", "CB", 40, 84, 89, 78, 88),
+          P("Jaap Stam", "CB", 25, 60, 95, 95, 90),
+          P("Edgar Davids", "CM", 58, 78, 86, 92, 88),
+          P("Clarence Seedorf", "CM", 70, 88, 62, 84, 87),
+          P("Ronald de Boer", "RM", 72, 80, 48, 78, 81),
+          P("Marc Overmars", "LW", 85, 78, 32, 92, 85),
+          P("Dennis Bergkamp", "ST/CAM", 93, 97, 40, 78, 95),
+          P("Patrick Kluivert", "ST", 91, 80, 28, 88, 88),
+                  P("Phillip Cocu", "CM", 64, 81, 74, 84, 86),
+        ],
+      }},
+      "Spain": { abbr: "ESP", c1: "#C60B1E", c2: "#FFC400", eras: {
+        "60s": [
+          P("Jose Angel Iribar", "GK", 90, 88, 60, 84, 82),
+          P("Feliciano Rivilla", "RB", 24, 52, 84, 82, 82),
+          P("Severino Reija", "LB", 24, 52, 82, 80, 80),
+          P("Ferran Olivella", "CB", 22, 54, 86, 80, 85),
+          P("Ignacio Zoco", "CDM/CB", 38, 64, 85, 84, 83),
+          P("Luis Suarez Miramontes", "CM", 74, 96, 55, 74, 92),
+          P("Josep Maria Fuste", "CM", 64, 80, 52, 74, 80),
+          P("Amancio Amaro", "RW", 86, 82, 30, 82, 88),
+          P("Carlos Lapetra", "LW", 74, 76, 30, 78, 80),
+          P("Marcelino", "ST", 82, 64, 28, 80, 87),
+                  P("Chus Pereda", "CAM", 74, 87, 45, 70, 81),
+                  P("Francisco Gento", "LW", 82, 78, 43, 89, 85),
+        ],
+        "00s": [
+          P("Iker Casillas", "GK", 94, 88, 72, 78, 90),
+          P("Sergio Ramos", "RB", 44, 64, 90, 90, 90),
+          P("Joan Capdevila", "LB", 34, 64, 82, 82, 83),
+          P("Carles Puyol", "CB", 32, 60, 95, 90, 95),
+          P("Carlos Marchena", "CB", 26, 54, 86, 84, 84),
+          P("Marcos Senna", "CDM", 50, 80, 86, 84, 88),
+          P("Xavi", "CM", 62, 98, 58, 70, 95),
+          P("Andres Iniesta", "CM/LW", 70, 96, 50, 72, 93),
+          P("David Silva", "RW/CAM", 76, 92, 42, 68, 87),
+          P("David Villa", "ST/LW", 94, 78, 28, 84, 93),
+          P("Fernando Torres", "ST", 92, 72, 25, 88, 90),
+                  P("Cesc Fabregas", "CM", 64, 83, 75, 84, 85),
+        ],
+        "10s": [
+          P("Iker Casillas", "GK", 92, 84, 72, 78, 94),
+          P("Sergio Ramos", "RB", 48, 66, 93, 92, 95),
+          P("Jordi Alba", "LB", 46, 80, 84, 90, 86),
+          P("Gerard Pique", "CB", 38, 76, 92, 88, 90),
+          P("Carles Puyol", "CB", 30, 58, 94, 88, 96),
+          P("Sergio Busquets", "CDM", 40, 94, 88, 76, 92),
+          P("Xabi Alonso", "CM", 62, 94, 76, 78, 91),
+          P("Xavi", "CM", 60, 98, 58, 68, 96),
+          P("Andres Iniesta", "CM/LW", 70, 97, 50, 72, 97),
+          P("Pedro", "RW/LW", 82, 74, 40, 86, 86),
+          P("David Villa", "ST/LW", 93, 78, 28, 84, 94),
+                  P("Juan Mata", "CAM", 80, 92, 49, 79, 85),
+        ],
+        "20s": [
+          P("Unai Simon", "GK", 82, 76, 84, 78, 82),
+          P("Dani Carvajal", "RB", 36, 70, 88, 84, 90),
+          P("Marc Cucurella", "LB", 34, 66, 84, 86, 85),
+          P("Robin Le Normand", "CB", 24, 56, 87, 86, 82),
+          P("Aymeric Laporte", "CB", 28, 72, 89, 86, 84),
+          P("Rodri", "CDM", 60, 90, 94, 90, 96),
+          P("Fabian Ruiz", "CM", 64, 86, 68, 80, 85),
+          P("Dani Olmo", "CAM", 76, 86, 50, 78, 86),
+          P("Lamine Yamal", "RW", 88, 92, 28, 78, 91),
+          P("Nico Williams", "LW", 84, 76, 30, 92, 86),
+          P("Alvaro Morata", "ST", 82, 68, 30, 84, 82),
+                  P("Mikel Oyarzabal", "ST/LW", 84, 60, 25, 85, 78),
+        ],
+      }},
+      "Portugal": { abbr: "POR", c1: "#DA291C", c2: "#046A38", eras: {
+        "60s": [
+          P("Jose Pereira", "GK", 82, 78, 58, 76, 78),
+          P("Joao Morais", "RB", 24, 50, 80, 80, 80),
+          P("Hilario", "LB", 26, 54, 82, 80, 81),
+          P("Germano", "CB", 25, 52, 89, 84, 86),
+          P("Vicente Lucas", "CB", 24, 54, 88, 82, 84),
+          P("Mario Coluna", "CM", 74, 92, 65, 84, 93),
+          P("Jaime Graca", "CM", 60, 76, 58, 78, 81),
+          P("Jose Augusto", "RW", 76, 82, 35, 78, 85),
+          P("Antonio Simoes", "LW", 78, 80, 32, 80, 84),
+          P("Eusebio", "ST", 99, 80, 30, 94, 97),
+          P("Jose Torres", "ST", 84, 62, 30, 90, 83),
+                  P("Alexandre Baptista", "CB", 28, 51, 86, 87, 84),
+        ],
+        "00s": [
+          P("Ricardo", "GK", 84, 78, 66, 76, 92),
+          P("Miguel", "RB", 32, 64, 83, 86, 82),
+          P("Nuno Valente", "LB", 26, 56, 82, 82, 80),
+          P("Ricardo Carvalho", "CB", 26, 66, 94, 84, 90),
+          P("Fernando Couto", "CB", 28, 54, 89, 86, 86),
+          P("Costinha", "CDM", 36, 62, 86, 84, 85),
+          P("Maniche", "CM", 68, 80, 66, 82, 86),
+          P("Deco", "CAM", 74, 93, 55, 78, 90),
+          P("Luis Figo", "RW", 84, 94, 40, 78, 92),
+          P("Cristiano Ronaldo", "LW/RW", 90, 82, 35, 92, 88),
+          P("Pauleta", "ST", 88, 64, 24, 80, 84),
+                  P("Simao Sabrosa", "LW", 83, 80, 43, 90, 85),
+        ],
+        "10s": [
+          P("Rui Patricio", "GK", 86, 82, 70, 74, 88),
+          P("Cedric Soares", "RB", 30, 62, 82, 82, 81),
+          P("Raphael Guerreiro", "LB", 42, 78, 82, 82, 83),
+          P("Pepe", "CB", 26, 52, 93, 90, 90),
+          P("Jose Fonte", "CB", 26, 54, 86, 84, 85),
+          P("William Carvalho", "CDM", 44, 74, 84, 86, 82),
+          P("Joao Moutinho", "CM", 60, 88, 62, 74, 86),
+          P("Renato Sanches", "CM", 60, 76, 66, 88, 82),
+          P("Ricardo Quaresma", "RW", 78, 82, 30, 80, 84),
+          P("Nani", "LW/ST", 82, 78, 32, 86, 85),
+          P("Cristiano Ronaldo", "ST/LW", 96, 84, 32, 94, 98),
+                  P("Adrien Silva", "CM", 61, 76, 72, 79, 78),
+        ],
+        "20s": [
+          P("Diogo Costa", "GK", 86, 80, 84, 82, 88),
+          P("Joao Cancelo", "RB", 48, 84, 84, 88, 84),
+          P("Nuno Mendes", "LB", 38, 68, 84, 92, 82),
+          P("Ruben Dias", "CB", 28, 64, 94, 90, 90),
+          P("Pepe", "CB", 24, 50, 89, 84, 89),
+          P("Vitinha", "CM", 60, 88, 64, 76, 83),
+          P("Bruno Fernandes", "CAM", 84, 92, 50, 80, 88),
+          P("Bernardo Silva", "RW/CM", 74, 92, 62, 78, 89),
+          P("Rafael Leao", "LW", 86, 78, 28, 92, 82),
+          P("Cristiano Ronaldo", "ST", 90, 78, 30, 86, 94),
+          P("Goncalo Ramos", "ST", 82, 62, 26, 84, 81),
+                  P("Joao Felix", "ST", 84, 62, 27, 83, 82),
+        ],
+      }},
+      "Croatia": { abbr: "CRO", c1: "#FF0000", c2: "#FFFFFF", eras: {
+        "90s": [
+          P("Drazen Ladic", "GK", 82, 78, 62, 76, 80),
+          P("Dario Simic", "RB/CB", 26, 56, 86, 84, 83),
+          P("Robert Jarni", "LB/LM", 44, 72, 81, 86, 84),
+          P("Igor Stimac", "CB", 26, 52, 86, 86, 84),
+          P("Slaven Bilic", "CB", 26, 54, 87, 86, 85),
+          P("Zvonimir Boban", "CM/CAM", 76, 90, 56, 80, 90),
+          P("Aljosa Asanovic", "CAM", 70, 88, 45, 74, 84),
+          P("Robert Prosinecki", "RM/CAM", 76, 93, 38, 68, 86),
+          P("Mario Stanic", "RW", 68, 70, 50, 82, 78),
+          P("Davor Suker", "ST", 94, 76, 25, 78, 93),
+          P("Goran Vlaovic", "ST", 80, 64, 24, 80, 79),
+                  P("Zvonimir Soldo", "CDM", 44, 70, 82, 84, 83),
+        ],
+        "10s": [
+          P("Danijel Subasic", "GK", 82, 76, 68, 72, 92),
+          P("Sime Vrsaljko", "RB", 30, 62, 84, 84, 83),
+          P("Ivan Strinic", "LB", 26, 56, 80, 80, 79),
+          P("Dejan Lovren", "CB", 26, 54, 86, 86, 85),
+          P("Domagoj Vida", "CB", 26, 50, 84, 86, 84),
+          P("Marcelo Brozovic", "CDM", 50, 84, 84, 88, 86),
+          P("Luka Modric", "CM", 72, 97, 68, 78, 97),
+          P("Ivan Rakitic", "CM", 66, 88, 64, 80, 88),
+          P("Ante Rebic", "RW/LW", 78, 66, 38, 88, 82),
+          P("Ivan Perisic", "LW", 84, 76, 44, 88, 89),
+          P("Mario Mandzukic", "ST", 86, 64, 45, 90, 90),
+                  P("Mateo Kovacic", "CM", 66, 81, 74, 86, 87),
+        ],
+      }},
+      "Belgium": { abbr: "BEL", c1: "#E30613", c2: "#FDDA24", eras: {
+        "10s": [
+          P("Thibaut Courtois", "GK", 94, 90, 80, 92, 92),
+          P("Thomas Meunier", "RB", 38, 68, 82, 84, 81),
+          P("Jan Vertonghen", "CB/LB", 32, 70, 90, 84, 87),
+          P("Vincent Kompany", "CB", 38, 64, 93, 90, 93),
+          P("Toby Alderweireld", "CB", 30, 74, 91, 84, 86),
+          P("Axel Witsel", "CDM", 52, 80, 80, 84, 84),
+          P("Kevin De Bruyne", "CM/CAM", 86, 98, 55, 84, 93),
+          P("Dries Mertens", "RW", 82, 80, 32, 80, 83),
+          P("Eden Hazard", "LW/CAM", 92, 92, 35, 88, 91),
+          P("Romelu Lukaku", "ST", 92, 66, 25, 94, 84),
+                  P("Mousa Dembele", "CM", 65, 85, 73, 86, 84),
+                  P("Yannick Carrasco", "LW", 76, 74, 38, 86, 76),
+        ],
+      }},
+      "Uruguay": { abbr: "URU", c1: "#5CBFEB", c2: "#FFFFFF", eras: {
+        "10s": [
+          P("Fernando Muslera", "GK", 84, 74, 68, 76, 86),
+          P("Maxi Pereira", "RB", 34, 60, 82, 84, 82),
+          P("Martin Caceres", "LB/RB", 28, 54, 85, 86, 83),
+          P("Diego Godin", "CB", 32, 58, 94, 88, 93),
+          P("Jose Maria Gimenez", "CB", 28, 52, 89, 88, 86),
+          P("Egidio Arevalo Rios", "CDM", 32, 58, 82, 84, 83),
+          P("Cristian Rodriguez", "LM", 62, 70, 56, 80, 79),
+          P("Nicolas Lodeiro", "CAM", 64, 80, 44, 74, 78),
+          P("Diego Forlan", "ST/CAM", 90, 84, 28, 80, 92),
+          P("Luis Suarez", "ST", 95, 84, 38, 88, 93),
+          P("Edinson Cavani", "ST/RW", 92, 68, 40, 90, 90),
+                  P("Diego Lugano", "CB", 29, 53, 85, 88, 81),
+        ],
+      }},
+    }
+  }
+};
+
+</script>
+<style>
+  :root{
+    --bg:#0b1410; --panel:#122019; --panel2:#16271e; --line:#1f3a2c;
+    --green:#22c55e; --gold:#eab308; --text:#e7f0ea; --dim:#8aa896;
+    --red:#ef4444; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -200px, #14301f 0%, var(--bg) 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height:100vh;
+  }
+  .wrap{max-width:1200px; margin:0 auto; padding:24px 16px 60px;}
+  header{text-align:center; margin-bottom:18px;}
+  .logo{
+    font-size:42px; font-weight:900; letter-spacing:2px; line-height:1;
+    background:linear-gradient(180deg,#fff 30%, var(--gold));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-transform:uppercase;
+  }
+  .tag{color:var(--dim); margin-top:6px; font-size:14px;}
+  .hidden{display:none !important;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px;
+  }
+  .modes{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:16px;}
+  .mode-btn{
+    cursor:pointer; border:2px solid var(--line); border-radius:var(--radius);
+    background:var(--panel2); padding:22px 16px; text-align:center; color:var(--text);
+    transition:.15s;
+  }
+  .mode-btn:hover{border-color:var(--green); transform:translateY(-2px);}
+  .mode-btn h2{font-size:22px; margin-bottom:6px;}
+  .mode-btn .sub{color:var(--dim); font-size:13px; line-height:1.5;}
+  .mode-btn .big{font-size:34px; font-weight:900; color:var(--gold); display:block; margin:8px 0 2px;}
+  .toggle-row{display:flex; justify-content:center; gap:10px; margin-top:18px; flex-wrap:wrap;}
+  .pill{
+    border:1px solid var(--line); border-radius:999px; padding:8px 18px; cursor:pointer;
+    background:var(--panel2); color:var(--dim); font-size:14px;
+  }
+  .pill.active{background:var(--green); color:#06130b; font-weight:700; border-color:var(--green);}
+  .howto{margin-top:18px; color:var(--dim); font-size:13.5px; line-height:1.7;}
+  .howto b{color:var(--text);}
+  .howto .steps{margin:8px 0 0 20px;}
+  .howto .steps li{margin-top:7px; padding-left:4px;}
+  .howto .steps li::marker{color:var(--gold); font-weight:800;}
+  .howto .tip{
+    margin-top:14px; padding:10px 14px; border-left:3px solid var(--gold);
+    background:var(--panel2); border-radius:0 8px 8px 0; font-size:13px;
+  }
+
+  .topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+  .roundinfo{font-size:15px; color:var(--dim);}
+  .roundinfo b{color:var(--gold); font-size:18px;}
+  .skips{display:flex; gap:8px;}
+  .skip-btn{
+    border:1px solid var(--line); background:var(--panel2); color:var(--text);
+    border-radius:8px; padding:7px 12px; cursor:pointer; font-size:13px;
+  }
+  .skip-btn:disabled{opacity:.35; cursor:not-allowed;}
+  .skip-btn:not(:disabled):hover{border-color:var(--gold);}
+
+  .slot{display:flex; gap:10px; justify-content:center; align-items:stretch; margin:4px 0 12px;}
+  .reel{
+    flex:1; background:var(--panel2); border:2px solid var(--line);
+    border-radius:var(--radius); padding:9px 10px; text-align:center; overflow:hidden; position:relative;
+  }
+  .reel .label{font-size:10px; letter-spacing:2px; color:var(--dim); text-transform:uppercase;}
+  .reel .value{font-size:17px; font-weight:800; margin-top:5px; min-height:26px;}
+  .reel.spinning .value{filter:blur(1.5px);}
+  .reel.locked{border-color:var(--green);}
+  .badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:50%; font-size:12px; font-weight:900;
+    margin-right:9px; vertical-align:middle; border:2px solid rgba(255,255,255,.25);
+  }
+  .posline{text-align:center; color:var(--dim); font-size:14px; margin-bottom:14px; min-height:20px;}
+  .posline b{color:var(--text); font-size:15px;}
+  .posline.place b{color:var(--gold);}
+
+  .players{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:10px;
+    max-height:64vh; overflow-y:auto; padding-right:4px;
+  }
+  .gamegrid{display:grid; grid-template-columns:minmax(0,1fr) 390px; gap:20px; align-items:start;}
+  .gleft{min-width:0;}
+  .gright{position:sticky; top:12px;}
+  @media (max-width:940px){
+    .gamegrid{grid-template-columns:1fr; gap:12px;}
+    /* flatten the left column so we can re-order: reels pinned top, cards, then pitch */
+    #screen-game .gleft{display:contents;}
+    #screen-game .slot{
+      order:1; position:sticky; top:0; z-index:50; margin:0;
+      background:var(--panel); padding:8px 0 6px; box-shadow:0 6px 12px rgba(0,0,0,.35);
+    }
+    #screen-game .posline{order:2; margin-bottom:8px;}
+    #screen-game .players{order:3; max-height:none; overflow:visible;}
+    #screen-game .gright{order:4; position:static;}
+    .gright{position:static;}
+    .players{max-height:none; overflow:visible;}
+  }
+  .pcard{
+    background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    padding:10px 11px; cursor:pointer; transition:.13s;
+  }
+  .pcard:hover{border-color:var(--green); transform:translateY(-2px);}
+  .pcard.selected{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+  .pcard.unfit{opacity:.38; cursor:not-allowed;}
+  .pcard.unfit:hover{border-color:var(--line); transform:none;}
+  .pcard .pname{font-weight:700; font-size:15px; margin-bottom:7px;}
+  .pcard .ppos{
+    display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:1px;
+    background:var(--line); border-radius:5px; padding:2px 7px; margin-bottom:5px; color:var(--gold);
+  }
+  .pcard .ppos.gk{color:#7dd3fc;}
+  .pcard .nofit{font-size:10.5px; color:var(--red); margin-left:6px;}
+  .statrow{display:flex; justify-content:space-between; margin-top:4px; font-size:12px; color:var(--dim);}
+  .statrow .v{color:var(--text); font-weight:700;}
+  .stathead{font-size:10px; letter-spacing:1.5px; color:#557a64; text-transform:uppercase; margin:5px 0 2px;}
+  .mystery{color:var(--dim); font-size:12.5px; margin-top:8px; font-style:italic;}
+
+  /* ---------- pitch ---------- */
+  .pitchwrap{
+    margin-top:0; background:var(--panel2); border:1px solid var(--line);
+    border-radius:var(--radius); padding:12px;
+  }
+  .pitchwrap h3{font-size:13px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; margin-bottom:10px; text-align:center;}
+  .pitch{
+    position:relative; width:100%; aspect-ratio:10/13.5; margin:0;
+    background:
+      repeating-linear-gradient(0deg, #16823f 0 9.1%, #147338 9.1% 18.2%);
+    border:2px solid #2e9d58; border-radius:10px; overflow:hidden;
+  }
+  .pitch .marks{
+    position:absolute; inset:8px; pointer-events:none;
+    border:2px solid rgba(255,255,255,.28); border-radius:6px;
+  }
+  .pitch .marks .half{position:absolute; left:0; right:0; top:50%; height:2px; background:rgba(255,255,255,.28);}
+  .pitch .marks .ccircle{
+    position:absolute; left:50%; top:50%; width:30%; aspect-ratio:1;
+    border:2px solid rgba(255,255,255,.28); border-radius:50%; transform:translate(-50%,-50%);
+  }
+  .pitch .marks .box{position:absolute; left:50%; transform:translateX(-50%); width:58%; height:15%; border:2px solid rgba(255,255,255,.28);}
+  .pitch .marks .box.t{top:-2px; border-top:none;}
+  .pitch .marks .box.b{bottom:-2px; border-bottom:none;}
+  .pitch .marks .six{position:absolute; left:50%; transform:translateX(-50%); width:26%; height:6%; border:2px solid rgba(255,255,255,.28);}
+  .pitch .marks .six.t{top:-2px; border-top:none;}
+  .pitch .marks .six.b{bottom:-2px; border-bottom:none;}
+  .pslot{
+    position:absolute; transform:translate(-50%,-50%);
+    width:22%; min-width:70px; min-height:50px; border-radius:10px; text-align:center;
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
+    font-size:10.5px; padding:4px 3px; cursor:default;
+    background:rgba(7,19,12,.55); border:2px dashed rgba(255,255,255,.35); color:#cfe6d6;
+    transition:.15s;
+  }
+  .pslot .slbl{font-weight:800; letter-spacing:1px; font-size:11px;}
+  .pslot.open-ok{
+    border-style:solid; border-color:var(--gold); color:var(--gold); cursor:pointer;
+    box-shadow:0 0 14px rgba(234,179,8,.55); background:rgba(40,32,4,.72);
+    animation:pulse 1.1s infinite;
+  }
+  @keyframes pulse{50%{box-shadow:0 0 26px rgba(234,179,8,.9);}}
+  .pslot.filled{
+    border-style:solid; border-color:var(--green); background:rgba(7,25,14,.88); color:var(--text);
+  }
+  .pslot .shirt{width:32px; height:29px; display:block; margin:0 auto 1px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
+  .bench{display:flex; justify-content:center; margin-top:10px;}
+  .bench .pslot{position:static; transform:none; width:60%; min-height:54px;}
+  .pslot.filled .sn{font-weight:700; font-size:11.5px; line-height:1.15; margin-top:2px;}
+  .pslot.filled .sc{color:var(--dim); font-size:10px; margin-top:1px;}
+
+  /* ---------- result ---------- */
+  .result-hero{text-align:center; padding:30px 10px 10px;}
+  .record{font-size:64px; font-weight:900; line-height:1;}
+  .record.perfect{color:var(--gold); text-shadow:0 0 40px rgba(234,179,8,.45);}
+  .verdict{font-size:20px; margin-top:10px; font-weight:700;}
+  .teamscore{
+    text-align:center; background:var(--panel2); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px 10px 14px; margin-bottom:18px;
+  }
+  .ts-num{font-size:54px; font-weight:900; line-height:1; color:var(--green);}
+  .ts-num.gold{color:var(--gold); text-shadow:0 0 24px rgba(234,179,8,.5);}
+  .ts-label{font-size:11px; letter-spacing:2.5px; color:var(--dim); text-transform:uppercase; margin-top:6px;}
+  .fixtures{
+    max-height:260px; overflow-y:auto; border:1px solid var(--line); border-radius:10px;
+    margin-top:10px; font-size:13px;
+  }
+  .fx{display:flex; justify-content:space-between; padding:7px 12px; border-bottom:1px solid #14241b;}
+  .fx:last-child{border-bottom:none;}
+  .fx .res-W{color:var(--green); font-weight:800;}
+  .fx .res-L{color:var(--red); font-weight:800;}
+  .btnrow{display:flex; gap:10px; justify-content:center; margin-top:22px; flex-wrap:wrap;}
+  .btn{
+    border:none; border-radius:10px; padding:12px 26px; font-size:15px; font-weight:700;
+    cursor:pointer; background:var(--green); color:#06130b;
+  }
+  .btn.alt{background:var(--panel2); color:var(--text); border:1px solid var(--line);}
+  .btn:hover{filter:brightness(1.1);}
+  footer{text-align:center; color:#41584b; font-size:11.5px; margin-top:40px; line-height:1.6;}
+  @media (max-width:940px){
+    /* placed after base rules so these win on phones */
+    .pitch{aspect-ratio:10/12;}
+    .pslot{min-width:62px; font-size:9.5px;}
+    .pcard{padding:8px 9px;}
+  }
+  @media (max-width:560px){
+    .record{font-size:46px;} .logo{font-size:30px;}
+    .slot{flex-direction:row; gap:8px;} .reel{max-width:none; padding:6px 8px;}
+    .reel .value{font-size:14px; min-height:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Invincible</div>
+    <div class="tag">Draft an all-time XI. Go the whole season unbeaten.</div>
+  </header>
+
+  <!-- HOME -->
+  <section id="screen-home">
+    <div class="card">
+      <div style="text-align:center; font-size:17px;">Choose your competition</div>
+      <div class="modes">
+        <div class="mode-btn" onclick="startGame('pl')">
+          <h2>Premier League</h2>
+          <span class="big">38&ndash;0</span>
+          <div class="sub">12 rounds &middot; eras 90s&ndash;20s<br>Out-do Arsenal's Invincibles: win every single league game.</div>
+        </div>
+        <div class="mode-btn" onclick="startGame('cl')">
+          <h2>Champions League</h2>
+          <span class="big">13&ndash;0</span>
+          <div class="sub">12 rounds &middot; eras 60s&ndash;20s<br>Every decade appears. Conquer Europe without dropping a game.</div>
+        </div>
+        <div class="mode-btn" onclick="startGame('wc')">
+          <h2>World Cup</h2>
+          <span class="big">7&ndash;0</span>
+          <div class="sub">12 rounds &middot; eras 60s&ndash;20s<br>Draft from the great national sides and win all seven on the road to the trophy.</div>
+        </div>
+      </div>
+      <div class="toggle-row">
+        <div class="pill active" id="pill-classic" onclick="setIQ(false)">Classic &mdash; stats visible</div>
+        <div class="pill" id="pill-iq" onclick="setIQ(true)">FootyIQ &mdash; stats hidden</div>
+      </div>
+      <div class="howto">
+        <b>How to play</b>
+        <ol class="steps">
+          <li><b>Spin.</b> Each round the machine lands on a club and an era.</li>
+          <li><b>Pick.</b> That squad appears &mdash; choose one player. Positions are real:
+              Ronaldo is a RW at Man Utd, a LW at Real Madrid.</li>
+          <li><b>Place.</b> Click your player, then a glowing spot on the pitch.
+              Twelve rounds build a 4-3-3 plus a super sub.</li>
+          <li><b>Survive the season.</b> Your twelve earn a team score out of 100 &mdash;
+              quality <i>and</i> balance, so one weak link costs you. Score high enough
+              and you win every game: <b>Invincible</b>.</li>
+        </ol>
+        <div class="tip">One team skip and one era skip per game &mdash; spend them well.
+        Card numbers are stylised era averages; the engine's true ratings stay hidden.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screen-game" class="hidden">
+    <div class="card">
+      <div class="topbar">
+        <div class="roundinfo">Round <b id="round-num"></b> <span id="round-total"></span></div>
+        <div class="skips">
+          <button class="skip-btn" id="skip-club" onclick="skipClub()">&#x21bb; Skip team (1)</button>
+          <button class="skip-btn" id="skip-era" onclick="skipEra()">&#x23ed; Skip era (1)</button>
+        </div>
+      </div>
+      <div class="gamegrid">
+        <div class="gleft">
+          <div class="slot">
+            <div class="reel" id="reel-club"><div class="label">Club</div><div class="value" id="reel-club-v">&mdash;</div></div>
+            <div class="reel" id="reel-era"><div class="label">Era</div><div class="value" id="reel-era-v">&mdash;</div></div>
+          </div>
+          <div class="posline" id="posline"></div>
+          <div class="players" id="players"></div>
+        </div>
+        <div class="gright">
+          <div class="pitchwrap">
+            <h3>Your XI &mdash; 4-3-3 <span style="color:var(--gold)">+ super sub</span></h3>
+            <div class="pitch" id="pitch"></div>
+            <div class="bench" id="bench"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section id="screen-result" class="hidden">
+    <div class="card">
+      <div class="result-hero">
+        <div class="record" id="final-record"></div>
+        <div class="verdict" id="final-verdict"></div>
+      </div>
+      <div class="gamegrid">
+        <div class="gleft">
+          <div class="teamscore">
+            <div class="ts-num" id="ts-num"></div>
+            <div class="ts-label">Team score</div>
+          </div>
+          <h3 style="font-size:13px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-top:20px;">Season</h3>
+          <div class="fixtures" id="fixtures" style="max-height:calc(100vh - 230px);"></div>
+        </div>
+        <div class="gright">
+          <div class="pitchwrap">
+            <h3>Final XI + super sub</h3>
+            <div class="pitch" id="final-pitch"></div>
+            <div class="bench" id="final-bench"></div>
+          </div>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" onclick="startGame(state.mode)">Play again</button>
+        <button class="btn alt" onclick="copyShare()" id="share-btn">Copy result</button>
+        <button class="btn alt" onclick="goHome()">Change mode</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Invincible is a fan-made knowledge game inspired by 82-0.com. Season numbers shown on player
+    cards are stylised era averages, not official statistics. Not affiliated with any league, club
+    or player. Privacy: the game runs entirely in your browser and collects no data &mdash; no accounts,
+    no cookies, no tracking.
+  </footer>
+</div>
+
+<script>
+"use strict";
+const STAT_KEYS = ["ATT","CRE","DEF","PHY","BIG"];
+const SQUAD_SIZE = 12;
+// 4-3-3 slots: which real positions fit each spot
+const SLOTS = [
+  { id:"GK",  label:"GK",  x:50, y:91, fits:["GK"] },
+  { id:"RB",  label:"RB",  x:87, y:68, fits:["RB"] },
+  { id:"RCB", label:"CB",  x:62, y:73, fits:["CB"] },
+  { id:"LCB", label:"CB",  x:38, y:73, fits:["CB"] },
+  { id:"LB",  label:"LB",  x:13, y:68, fits:["LB"] },
+  { id:"RCM", label:"CM",  x:73, y:43, fits:["CM","CDM","CAM"] },
+  { id:"CM",  label:"CM",  x:50, y:49, fits:["CM","CDM","CAM"] },
+  { id:"LCM", label:"CM",  x:27, y:43, fits:["CM","CDM","CAM"] },
+  { id:"RW",  label:"RW",  x:81, y:17, fits:["RW","RM"] },
+  { id:"ST",  label:"ST",  x:50, y:11, fits:["ST"] },
+  { id:"LW",  label:"LW",  x:19, y:17, fits:["LW","LM"] },
+  { id:"SUB", label:"SUPER SUB", bench:true, x:0, y:0,
+    fits:["RB","CB","LB","CDM","CM","CAM","RM","LM","RW","LW","ST"] },
+];
+// a player may have multiple positions, e.g. "LW/ST"
+const fitsSlot = (p, s) => p.pos.split("/").some(x => s.fits.includes(x));
+const $ = id => document.getElementById(id);
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const sum = p => p.s.reduce((x,y)=>x+y,0);
+// Goalkeepers carry GK-specific stats [STO, HAN, KIC, CMD, BIG];
+// contrib() maps every player onto the five team categories [ATT,CRE,DEF,PHY,BIG]
+function contrib(p){
+  if (p.pos !== "GK") return p.s;
+  const sto=p.s[0], han=p.s[1], kic=p.s[2], cmd=p.s[3], big=p.s[4];
+  return [5, Math.round(kic*0.85), Math.round(sto*0.5 + han*0.3 + cmd*0.2), Math.round((cmd+han)/2), big];
+}
+const psum = p => contrib(p).reduce((x,y)=>x+y,0);
+
+let iqMode = false;
+let state = null;
+
+function setIQ(v){
+  iqMode = v;
+  $("pill-classic").classList.toggle("active", !v);
+  $("pill-iq").classList.toggle("active", v);
+}
+
+// ---------- display stats: stylised season averages ----------
+function nameHash(s){ let h = 0; for (const ch of s) h = (h*31 + ch.charCodeAt(0)) | 0; return Math.abs(h); }
+function roleOf(pos){
+  pos = pos.split("/")[0];
+  if (pos === "GK") return "GK";
+  if (["RB","CB","LB"].includes(pos)) return "DF";
+  if (["CDM","CM","CAM"].includes(pos)) return "MF";
+  if (["RM","LM","RW","LW"].includes(pos)) return "W";
+  return "ST";
+}
+function displayStats(p){
+  const h = nameHash(p.n);
+  const j = (n, span) => ((h >> n) % (2*span+1)) - span;
+  const [a,c,d] = p.s;
+  const apps = 29 + (h % 7);
+  const role = roleOf(p.pos);
+  if (role === "GK"){
+    const q = 0.5*p.s[0] + 0.3*p.s[1] + 0.2*p.s[3];   // shot-stopping, handling, command
+    const cs = Math.max(3, Math.round(apps * (0.30 + (q-75)*0.013) + j(3,1)));
+    const ga = Math.max(0.5, Math.min(1.8, 1.55 - (q-75)*0.045 + j(5,1)*0.05));
+    return [["Apps / season", apps], ["Clean sheets", cs], ["Conceded / game", ga.toFixed(2)]];
+  }
+  let g, as;
+  if (role === "ST"){ g = (a-50)*0.55; as = (c-50)*0.15; }
+  else if (role === "W"){ g = (a-50)*0.42; as = (c-50)*0.28; }
+  else if (role === "MF"){ g = Math.max(0,(a-48))*0.25; as = (c-50)*0.30; }
+  else { g = Math.max(0,(a-28))*0.11; as = Math.max(0,(c-45))*0.15; }
+  g = Math.max(0, Math.round(g + j(2,1)));
+  as = Math.max(0, Math.round(as + j(4,1)));
+  const rows = [["Apps / season", apps], ["Goals / season", g], ["Assists / season", as]];
+  if (role === "DF"){
+    const cs = Math.max(3, Math.round(apps * (0.30 + (d-80)*0.012) + j(3,1)));
+    rows.push(["Clean sheets", cs]);
+  }
+  return rows;
+}
+
+// ---------- calibration: greedy best/worst XI fill ----------
+function allPlayers(mode){
+  const out = [];
+  for (const cn in mode.clubs)
+    for (const era in mode.clubs[cn].eras)
+      for (const p of mode.clubs[cn].eras[era]) out.push(p);
+  return out;
+}
+function greedyFill(pool, valueFn, desc){
+  const sorted = pool.slice().sort((x,y)=> desc ? valueFn(y)-valueFn(x) : valueFn(x)-valueFn(y));
+  const open = new Set(SLOTS.map(s=>s.id));
+  const used = new Set();
+  let total = 0;
+  for (const p of sorted){
+    if (used.has(p.n)) continue;
+    const slot = SLOTS.find(s => open.has(s.id) && fitsSlot(p, s));
+    if (slot){ open.delete(slot.id); used.add(p.n); total += valueFn(p); }
+    if (!open.size) break;
+  }
+  return total;
+}
+function calibrate(mode){
+  const pool = allPlayers(mode);
+  const cal = {
+    tMax: greedyFill(pool, psum, true),
+    tMin: greedyFill(pool, psum, false),
+    catMax: STAT_KEYS.map((_,c)=> greedyFill(pool, p=>contrib(p)[c], true)),
+  };
+  // sMax: raw score of the best possible XII — used so a perfect squad = 100
+  const sorted = pool.slice().sort((a,b)=>psum(b)-psum(a));
+  const open = new Set(SLOTS.map(s=>s.id));
+  const used = new Set();
+  const catBest = [0,0,0,0,0];
+  for (const p of sorted){
+    if (used.has(p.n)) continue;
+    const slot = SLOTS.find(s => open.has(s.id) && fitsSlot(p, s));
+    if (slot){ open.delete(slot.id); used.add(p.n); for (let c=0;c<5;c++) catBest[c] += contrib(p)[c]; }
+    if (!open.size) break;
+  }
+  let balBest = 1;
+  for (let c=0;c<5;c++) balBest = Math.min(balBest, catBest[c] / cal.catMax[c]);
+  cal.sMax = 0.60 + 0.40 * balBest;
+  return cal;
+}
+
+// ---------- game flow ----------
+function eraSequence(mode){
+  let eras = mode.eras.slice();
+  if (eras.length * 2 <= SQUAD_SIZE) eras = eras.concat(mode.eras);
+  while (eras.length < SQUAD_SIZE) eras.push(rnd(mode.eras));
+  return shuffle(eras).slice(0, SQUAD_SIZE);
+}
+function startGame(modeKey){
+  const mode = DATA[modeKey];
+  state = {
+    mode: modeKey, m: mode,
+    eras: eraSequence(mode),
+    round: 0,
+    picks: {},                 // slotId -> {p, club, era}
+    pickedNames: new Set(),
+    selected: null,
+    clubSkips: 1, eraSkips: 1,
+    cal: calibrate(mode),
+  };
+  $("screen-home").classList.add("hidden");
+  $("screen-result").classList.add("hidden");
+  $("screen-game").classList.remove("hidden");
+  beginRound();
+}
+
+function openSlots(){ return SLOTS.filter(s => !state.picks[s.id]); }
+function slotsForPlayer(p){ return openSlots().filter(s => fitsSlot(p, s)); }
+function selectable(p){
+  return !state.pickedNames.has(p.n) && slotsForPlayer(p).length > 0;
+}
+function eligible(club, era){
+  if (!club.eras[era]) return [];
+  return club.eras[era].filter(selectable);
+}
+function clubsFor(era){
+  return Object.keys(state.m.clubs).filter(cn => eligible(state.m.clubs[cn], era).length > 0);
+}
+
+function beginRound(){
+  const i = state.round;
+  state.selected = null;
+  // on phones, return to the top (reels + cards) for the new round
+  if (i > 0 && window.innerWidth <= 940){ try{ window.scrollTo({ top: 0, behavior: "smooth" }); }catch(e){} }
+  $("round-num").textContent = (i+1);
+  $("round-total").textContent = "of " + SQUAD_SIZE;
+  $("posline").innerHTML = "";
+  $("players").innerHTML = "";
+  renderPitch($("pitch"), true);
+  updateSkipButtons(true);
+  const era = state.eras[i];
+  state.current = { era, club: rnd(clubsFor(era)) };
+  spinReels();
+}
+
+function spinReels(which){
+  which = which || "both";
+  const spinClub = which !== "era", spinEra = which !== "club";
+  const clubNames = Object.keys(state.m.clubs);
+  const eraNames = state.m.eras;
+  const rc = $("reel-club"), re = $("reel-era");
+  updateSkipButtons(true);
+  if (spinClub){ rc.classList.add("spinning"); rc.classList.remove("locked"); }
+  if (spinEra){ re.classList.add("spinning"); re.classList.remove("locked"); }
+  let t = 0;
+  const iv = setInterval(()=>{
+    if (spinClub) $("reel-club-v").textContent = rnd(clubNames);
+    if (spinEra) $("reel-era-v").textContent = rnd(eraNames);
+    t += 70;
+    if (t >= 900){
+      clearInterval(iv);
+      settleReels();
+    }
+  }, 70);
+}
+function settleReels(){
+  const { club, era } = state.current;
+  const c = state.m.clubs[club];
+  const lum = (hex=>{const n=parseInt(hex.slice(1),16);return (0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;})(c.c1);
+  $("reel-club-v").innerHTML =
+    '<span class="badge" style="background:'+c.c1+';color:'+(lum>0.45?'#0b1410':'#f3f6f4')+';border-color:'+c.c2+'">'+c.abbr+'</span>'+club;
+  $("reel-era-v").textContent = era;
+  $("reel-club").classList.remove("spinning");
+  $("reel-era").classList.remove("spinning");
+  $("reel-club").classList.add("locked");
+  $("reel-era").classList.add("locked");
+  $("posline").className = "posline";
+  $("posline").innerHTML = "Pick a player from the <b>"+club+" "+era+"</b> squad";
+  renderPlayers();
+  updateSkipButtons(false);
+}
+
+const POS_ORDER = { GK:0, LB:1, CB:2, RB:3, CDM:4, CM:5, CAM:6, LM:7, LW:7, ST:8, RM:9, RW:9 };
+function renderPlayers(){
+  const { club, era } = state.current;
+  const squad = state.m.clubs[club].eras[era].slice()
+    .sort((a,b)=> POS_ORDER[a.pos.split("/")[0]] - POS_ORDER[b.pos.split("/")[0]]);
+  const wrap = $("players");
+  wrap.innerHTML = "";
+  squad.forEach(p=>{
+    const fit = selectable(p);
+    const card = document.createElement("div");
+    card.className = "pcard" + (fit ? "" : " unfit") + (state.selected === p ? " selected" : "");
+    let html = '<span class="ppos'+(p.pos==="GK"?" gk":"")+'">'+p.pos+'</span>';
+    if (!fit) html += '<span class="nofit">'+(state.pickedNames.has(p.n) ? "already in your XI" : "no open spot")+'</span>';
+    html += '<div class="pname">'+p.n+'</div>';
+    if (iqMode){
+      html += '<div class="mystery">Stats hidden — trust your football brain.</div>';
+    } else {
+      html += '<div class="stathead">'+era+' era averages</div>';
+      displayStats(p).forEach(([k,v])=>{
+        html += '<div class="statrow"><span>'+k+'</span><span class="v">'+v+'</span></div>';
+      });
+    }
+    card.innerHTML = html;
+    if (fit) card.onclick = ()=>selectPlayer(p);
+    wrap.appendChild(card);
+  });
+}
+
+function selectPlayer(p){
+  state.selected = (state.selected === p) ? null : p;
+  renderPlayers();
+  renderPitch($("pitch"), true);
+  // on phones, jump to the pitch so the glowing spots are visible
+  if (state.selected && window.innerWidth <= 940 && $("pitch").scrollIntoView)
+    try{ $("pitch").scrollIntoView({ behavior: "smooth", block: "center" }); }catch(e){}
+  const pl = $("posline");
+  if (state.selected){
+    const spots = slotsForPlayer(p).map(s=>s.label);
+    pl.className = "posline place";
+    pl.innerHTML = "Now click a glowing spot to place <b>"+p.n+"</b> ("+[...new Set(spots)].join(" / ")+")";
+  } else {
+    pl.className = "posline";
+    pl.innerHTML = "Pick a player from the <b>"+state.current.club+" "+state.current.era+"</b> squad";
+  }
+}
+
+function placeSelected(slotId){
+  const p = state.selected;
+  if (!p) return;
+  const slot = SLOTS.find(s=>s.id===slotId);
+  if (!slot || state.picks[slotId] || !fitsSlot(p, slot)) return;
+  state.picks[slotId] = { p, club: state.current.club, era: state.current.era };
+  state.pickedNames.add(p.n);
+  state.selected = null;
+  state.round++;
+  if (state.round >= SQUAD_SIZE) finish();
+  else beginRound();
+}
+
+// ---------- pitch rendering ----------
+function renderPitch(container, interactive){
+  container.innerHTML = '<div class="marks"><div class="half"></div><div class="ccircle"></div>'+
+    '<div class="box t"></div><div class="six t"></div><div class="box b"></div><div class="six b"></div></div>';
+  const bench = $(container.id === "pitch" ? "bench" : "final-bench");
+  bench.innerHTML = "";
+  SLOTS.forEach(s=>{
+    const d = document.createElement("div");
+    const pk = state.picks[s.id];
+    let cls = "pslot";
+    if (s.bench) cls += " benchslot";
+    if (pk) cls += " filled";
+    else if (interactive && state.selected && fitsSlot(state.selected, s)) cls += " open-ok";
+    d.className = cls;
+    if (!s.bench){ d.style.left = s.x + "%"; d.style.top = s.y + "%"; }
+    if (pk){
+      const c = state.m.clubs[pk.club];
+      d.innerHTML = '<svg class="shirt" viewBox="0 0 48 44">'+
+        '<path d="M16 2 L20 6 H28 L32 2 L46 9 L41 19 L34 15 V42 H14 V15 L7 19 L2 9 Z" fill="'+c.c1+'" stroke="'+c.c2+'" stroke-width="2.5" stroke-linejoin="round"/></svg>'+
+        '<div class="sn">'+pk.p.n+'</div><div class="sc">'+c.abbr+' &middot; '+pk.era+'</div>';
+    } else {
+      d.innerHTML = '<div class="slbl">'+s.label+'</div>';
+    }
+    if (!pk && interactive) d.onclick = ()=>placeSelected(s.id);
+    (s.bench ? bench : container).appendChild(d);
+  });
+}
+
+function updateSkipButtons(spinning){
+  const last = state.round >= SQUAD_SIZE - 1;
+  $("skip-club").textContent = "↻ Skip team ("+state.clubSkips+")";
+  $("skip-era").textContent = "⏭ Skip era ("+state.eraSkips+")";
+  const noAltClub = state.current ? clubsFor(state.current.era).length < 2 : false;
+  $("skip-club").disabled = spinning || state.clubSkips < 1 || noAltClub;
+  $("skip-era").disabled = spinning || state.eraSkips < 1 || last;
+}
+function skipClub(){
+  if (state.clubSkips < 1) return;
+  const { era, club } = state.current;
+  const others = clubsFor(era).filter(c => c !== club);
+  if (!others.length) return;
+  state.clubSkips--;
+  state.selected = null;
+  // new team, SAME era — only the club reel spins
+  state.current.club = rnd(others);
+  spinReels("club");
+}
+function skipEra(){
+  if (state.eraSkips < 1) return;
+  const i = state.round;
+  if (i >= state.eras.length - 1) return;
+  const cur = state.eras[i];
+  state.eraSkips--;
+  state.selected = null;
+  // pick a DIFFERENT era — and prefer one the CURRENT team covers, so the team stays
+  const club = state.current.club;
+  const later = [];
+  for (let k = i+1; k < state.eras.length; k++) if (state.eras[k] !== cur) later.push(k);
+  const keepable = later.filter(k => {
+    const e = state.eras[k];
+    return state.m.clubs[club].eras[e] && eligible(state.m.clubs[club], e).length > 0;
+  });
+  if (keepable.length){
+    const j = rnd(keepable);
+    [state.eras[i], state.eras[j]] = [state.eras[j], state.eras[i]];
+    state.current = { era: state.eras[i], club };
+    spinReels("era");
+    return;
+  }
+  let newEra;
+  if (later.length){
+    const j = rnd(later);
+    [state.eras[i], state.eras[j]] = [state.eras[j], state.eras[i]];
+    newEra = state.eras[i];
+  } else {
+    newEra = rnd(state.m.eras.filter(e => e !== cur));
+    state.eras[i] = newEra;
+  }
+  state.current = { era: newEra, club: rnd(clubsFor(newEra)) };
+  spinReels("both");
+}
+
+// ---------- season simulation ----------
+function picksArray(){ return SLOTS.map(s=>state.picks[s.id]).filter(Boolean); }
+function score(){
+  const cal = state.cal;
+  const catTotal = [0,0,0,0,0];
+  let T = 0;
+  for (const pk of picksArray()){ T += psum(pk.p); const cv = contrib(pk.p); for (let c=0;c<5;c++) catTotal[c] += cv[c]; }
+  const x = Math.max(0, Math.min(1, (T - cal.tMin) / (cal.tMax - cal.tMin)));
+  let bal = 1;
+  for (let c=0;c<5;c++) bal = Math.min(bal, catTotal[c] / cal.catMax[c]);
+  // rescaled so the best possible XII in this mode scores exactly 100
+  const S = Math.min(1, (0.60 * x + 0.40 * bal) / cal.sMax);
+  return { T, catTotal, x, bal, S };
+}
+function modeParams(modeKey){
+  // scores rescaled (best possible XII = 100); thresholds equalised so each mode
+  // gives a well-played draft roughly a 1-in-50 shot at a perfect season
+  return { pl:{lo:0.37, hi:0.82}, cl:{lo:0.37, hi:0.84}, wc:{lo:0.37, hi:0.86} }[modeKey];
+}
+function projectWins(S, target, modeKey){
+  // Deterministic win projection. Squad strength = 60% total quality + 40% weakest
+  // category. Reach the Invincible threshold (hi) and you win every game.
+  const P = modeParams(modeKey);
+  if (S >= P.hi) return target;            // INVINCIBLE
+  const u = Math.max(0, Math.min(1, (S - P.lo) / (P.hi - P.lo)));
+  const f = 0.30 + 0.70 * u;
+  return Math.max(0, Math.min(target - 1, Math.round(target * f)));
+}
+
+function finish(){
+  const m = state.m;
+  const sc = score();
+  const wins = projectWins(sc.S, m.target, state.mode);
+  const losses = m.target - wins;
+  $("screen-game").classList.add("hidden");
+  $("screen-result").classList.remove("hidden");
+
+  const rec = $("final-record");
+  rec.textContent = wins + "–" + losses;
+  rec.classList.toggle("perfect", losses === 0);
+
+  const sNow = Math.round(sc.S * 100);
+  const v = $("final-verdict");
+  if (m.stages && losses > 0){
+    // knockout flavour: a loss means going home, not dropping points
+    if (losses === 1) v.innerHTML = "So close. One bad night sent you home.";
+    else if (losses <= 2) v.innerHTML = "A deep run — but someone else lifted the trophy.";
+    else if (losses <= Math.ceil(m.target*0.4)) v.innerHTML = "Knocked out when it mattered. The wait goes on.";
+    else v.innerHTML = "Out in the group stage. An early flight home.";
+  } else if (losses === 0){
+    v.innerHTML = "&#127942; INVINCIBLE! A perfect season. Immortality.";
+  } else if (losses <= 2){
+    v.innerHTML = "So, so close. " + losses + " bad " + (losses===1?"afternoon":"afternoons") + " ruined immortality.";
+  } else if (losses <= Math.ceil(m.target*0.2)){
+    v.innerHTML = (state.mode==="pl"
+      ? "Title-winning team — but not an invincible one."
+      : "You lift the trophy — but the unbeaten run is gone.");
+  } else if (losses <= Math.ceil(m.target*0.4)){
+    v.innerHTML = (state.mode==="pl"
+      ? "Decent side. Top four. Nobody writes books about top four."
+      : "Semi-final heartbreak. Close, but Europe remembers winners.");
+  } else {
+    v.innerHTML = (state.mode==="pl"
+      ? "The fans are on the board's back already."
+      : "Out in the group stage. Thursday nights await.");
+  }
+
+  // single team score
+  const ts = $("ts-num");
+  ts.textContent = sNow;
+  ts.classList.toggle("gold", losses === 0);
+
+  renderPitch($("final-pitch"), false);
+  renderFixtures(wins, losses, sc);
+  state.lastResult = { wins, losses, sc };
+}
+
+function renderFixtures(wins, losses, sc){
+  const m = state.m;
+  // Real opponents: a random club + era each fixture, with strength taken
+  // from that actual squad. Your losses fall against the strongest draws.
+  const clubNames = Object.keys(m.clubs);
+  const opps = [];
+  for (let g=0; g<m.target; g++){
+    const cn = rnd(clubNames);
+    const era = rnd(Object.keys(m.clubs[cn].eras));
+    const squad = m.clubs[cn].eras[era];
+    const str = squad.map(psum).sort((a,b)=>b-a).slice(0,11).reduce((a,b)=>a+b,0);
+    opps.push({ cn, era, str });
+  }
+  const byStrength = opps.map((o,i)=>[o.str,i]).sort((a,b)=>b[0]-a[0]);
+  const lossIdx = new Set(byStrength.slice(0, losses).map(x=>x[1]));
+  const strMax = Math.max(...opps.map(o=>o.str)), strMin = Math.min(...opps.map(o=>o.str));
+  const atk = sc.catTotal[0] / state.cal.catMax[0];
+  const dfn = sc.catTotal[2] / state.cal.catMax[2];
+  const wrap = $("fixtures");
+  wrap.innerHTML = "";
+  state.fixtureEmoji = "";
+  for (let g=0; g<m.target; g++){
+    const o = opps[g];
+    const hard = strMax===strMin ? 0.5 : (o.str - strMin) / (strMax - strMin);
+    const lost = lossIdx.has(g);
+    let gf, ga;
+    if (lost){ ga = 1 + Math.floor(Math.random()*2); gf = ga - 1; }
+    else {
+      gf = 1 + Math.floor(Math.random() * (1 + atk*3.2*(1 - hard*0.55)));
+      ga = Math.random() < dfn*(0.95 - hard*0.45) ? 0 : Math.floor(Math.random()*Math.max(1,gf));
+    }
+    state.fixtureEmoji += lost ? "\u{1F534}" : "\u{1F7E2}";
+    const ha = m.stages ? "" : (g % 2 ? " (A)" : " (H)");
+    const label = m.stages ? m.stages[g]+" \u2014 " : (m.target>20 ? "MW"+(g+1)+" " : "");
+    wrap.innerHTML += '<div class="fx"><span>'+label+'vs '+o.era+' '+o.cn+ha+
+      '</span><span class="res-'+(lost?"L":"W")+'">'+gf+'\u2013'+ga+' '+(lost?"L":"W")+'</span></div>';
+  }
+}
+
+function copyShare(){
+  const r = state.lastResult;
+  const squad = SLOTS.map(s=>{const pk=state.picks[s.id]; return pk ? s.label+": "+pk.p.n+" ("+pk.era+")" : "";}).filter(Boolean).join(" | ");
+  const txt = "INVINCIBLE ⚽ "+state.m.label+" — "+r.wins+"-"+r.losses+
+    (r.losses===0 ? " 🏆 PERFECT SEASON" : "")+
+    "\n"+state.fixtureEmoji+"\n"+squad;
+  const ok = ()=>{ $("share-btn").textContent = "Copied!"; setTimeout(()=>$("share-btn").textContent = "Copy result", 1500); };
+  const fallback = ()=>{
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); document.body.removeChild(ta); ok();
+    }catch(e){
+      $("share-btn").textContent = "Copy failed";
+      setTimeout(()=>$("share-btn").textContent = "Copy result", 1500);
+    }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(ok).catch(fallback);
+  else fallback();
+}
+
+function goHome(){
+  $("screen-game").classList.add("hidden");
+  $("screen-result").classList.add("hidden");
+  $("screen-home").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
